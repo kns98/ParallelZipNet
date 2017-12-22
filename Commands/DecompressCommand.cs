@@ -5,5 +5,10 @@ namespace ParallelZipNet.Commands {
         protected override IChunkProcessor CreateChunkProcessor(StreamWrapper stream, ConcurentChunkQueue chunkQueue) {
             return new ChunkDecompressor(stream, chunkQueue);
         }  
+
+        protected override void Process(StreamWrapper stream) {
+            NewDecompressing.Decompress(stream, stream);
+        }
+
     }
 }

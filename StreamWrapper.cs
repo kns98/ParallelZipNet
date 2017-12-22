@@ -6,6 +6,8 @@ namespace ParallelZipNet {
         FileStream srcStream;
         FileStream destStream;
 
+        public long SourcePosition { get {return srcStream.Position;} } 
+        public long DestPosition { get {return destStream.Position;} } 
         public long BytesToRead { get { return srcStream.Length - srcStream.Position; } }
         public long TotalBytesToRead { get { return srcStream.Length; } }
         
