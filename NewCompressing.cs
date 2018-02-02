@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System;
+using System.Threading;
 
 namespace ParallelZipNet {
     static class NewCompressing {
@@ -37,10 +38,51 @@ namespace ParallelZipNet {
         }
 
         public static void WriteCompressed(this IEnumerable<Chunk> chunks, StreamWrapper dest) {
-            foreach(var chunk in chunks) {               
+            foreach(var chunk in chunks) {
                 dest.WriteInt32(chunk.Index);
                 dest.WriteInt32(chunk.Data.Length);
                 dest.WriteBuffer(chunk.Data);
+            }
+        }
+
+        static Job[] jobs = null;
+        static Thread[] threads = null;
+
+        public static IEnumerable<Chunk> AsMultiple(this IEnumerable<Chunk> chunks, int threadCount) {
+            if(jobs == null) {
+                jobs = new Job[threadCount];
+                for(int i = 0; i < jobs.Length; i++)
+                    jobs[i] = new Job(chunks);
+            }
+
+            if(threads == null) {
+                threads = new Thread[threadCount];            
+                for(int i = 0; i < threads.Length; i++) {
+                    threads[i] = new Thread(jobs[i].Run) { 
+                        IsBackground = false
+                    };
+                }
+                foreach(var thread in threads)
+                    thread.Start();
+            }
+
+            while(true) {
+                foreach(var job in jobs) {
+                    Chunk resultChunk = job.GetChunk();
+                    if(resultChunk != null)
+                        yield return job.GetChunk();
+                    else
+                        Thread.Yield();
+                }
+            }
+        }
+
+
+        static readonly object singleLocker = new object();
+        public static IEnumerable<Chunk> AsSingle(this IEnumerable<Chunk> chunks) {            
+            lock(singleLocker) {
+                foreach(var chunk in chunks)
+                    yield return chunk;            
             }
         }
 
@@ -48,9 +90,30 @@ namespace ParallelZipNet {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
-            ReadDecompressed(source).
-                CompressChunks().
-                WriteCompressed(dest);
+            ReadDecompressed(source)
+                .AsSingle()
+                .CompressChunks()
+                .AsMultiple(2)
+                .WriteCompressed(dest);
         }
+    }
+
+    class Job {
+        readonly object targetLock = new object();
+        readonly Queue<Chunk> target = new Queue<Chunk>();
+        readonly IEnumerable<Chunk> source;
+
+        public Job(IEnumerable<Chunk> source) {
+            this.source = source;
+        }
+        public void Run() {
+            foreach(var chunk in source)
+                target.Enqueue(chunk);
+        }
+        public Chunk GetChunk() {
+            lock(targetLock) {
+                return target.Count > 0 ? target.Dequeue() : null;
+            }
+        }        
     }
 }
