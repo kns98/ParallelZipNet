@@ -36,8 +36,10 @@ namespace ParallelZipNet {
         }
 
         public static void WriteDecompressed(this IEnumerable<Chunk> chunks, StreamWrapper dest) {
-            foreach(var chunk in chunks) 
-                dest.WriteBuffer(chunk.Data);
+            foreach(var chunk in chunks) {
+                long position = chunk.Index * Constants.CHUNK_SIZE;
+                dest.WriteBuffer(chunk.Data, position);
+            }
         }
         public static void Decompress(StreamWrapper source, StreamWrapper dest) {
             int chunkCount = source.ReadInt32();

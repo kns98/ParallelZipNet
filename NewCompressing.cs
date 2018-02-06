@@ -9,24 +9,38 @@ using System.Threading;
 namespace ParallelZipNet {
     static class NewCompressing {
         static int chunkIndex = 0;        
-        static byte[] data = null;
-        static Chunk chunk = null;
-        static bool isLastChunk;
+        // static byte[] data = null;
+        // static Chunk chunk = null;
+        //static bool isLastChunk;
+        static readonly object singleLocker = new object();
         
-        public static IEnumerable<Chunk> ReadDecompressed(StreamWrapper source) {
-            do {                
+        public static IEnumerable<Chunk> AsSingle(this IEnumerable<Chunk> chunks) {            
+            Chunk result;
+            var chunkEnum = chunks.GetEnumerator();            
+            while(true) {
                 lock(singleLocker) {
-                    long bytesToRead = source.BytesToRead;
-                    isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
-                    int readBytes;
-                    if(isLastChunk) 
-                        readBytes = (int)bytesToRead;
-                    else
-                        readBytes = Constants.CHUNK_SIZE;
-                    data = source.ReadBuffer(readBytes);
-                    chunk = new Chunk(chunkIndex++, data);
-
-                }
+                    result = chunkEnum.MoveNext() ? chunkEnum.Current : null;
+                }                
+                if(result != null)
+                    yield return result;                    
+                else 
+                    yield break;
+                    
+            }          
+        }
+                
+        public static IEnumerable<Chunk> ReadDecompressed(StreamWrapper source) {
+            bool isLastChunk;
+            do {                
+                long bytesToRead = source.BytesToRead;
+                isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
+                int readBytes;
+                if(isLastChunk) 
+                    readBytes = (int)bytesToRead;
+                else
+                    readBytes = Constants.CHUNK_SIZE;
+                byte[] data = source.ReadBuffer(readBytes);
+                Chunk chunk = new Chunk(chunkIndex++, data);
                 yield return chunk;
 
             }
@@ -34,14 +48,16 @@ namespace ParallelZipNet {
         }
 
         public static IEnumerable<Chunk> CompressChunks(this IEnumerable<Chunk> chunks) {
-            foreach(var chunk in chunks) {
+            foreach(var chunk in chunks) {                
                 MemoryStream compressed;
                 using(compressed = new MemoryStream()) {
                     using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
                         gzip.Write(chunk.Data, 0, chunk.Data.Length);                    
+                        
                     }
-                }
-                yield return new Chunk(chunk.Index, compressed.ToArray());
+                }       
+                byte[] compresedData = compressed.ToArray();         
+                yield return new Chunk(chunk.Index, compresedData);
             }            
         }
 
@@ -92,31 +108,12 @@ namespace ParallelZipNet {
                 thread.Join();
         }
 
-
-        static readonly object singleLocker = new object();
-        public static IEnumerable<Chunk> AsSingle(this IEnumerable<Chunk> chunks) {            
-            var chunkEnum = chunks.GetEnumerator();
-            bool next = true;
-            int x = 0;
-            while(true) {
-                lock(singleLocker) {
-                    x++;
-                    next = chunkEnum.MoveNext();
-                }                
-                if(next)
-                    yield return chunkEnum.Current;                    
-                else 
-                    yield break;
-                    
-            }          
-        }
-
         public static void Compress(StreamWrapper source, StreamWrapper dest) {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
             ReadDecompressed(source)
-                //.AsSingle()
+                .AsSingle()
                 .CompressChunks()
                 .AsMultiple(2)
                 .WriteCompressed(dest);
@@ -145,7 +142,7 @@ namespace ParallelZipNet {
         public void Run() {            
             foreach(var chunk in source) {                    
                 lock(targetLock) {
-                    Console.WriteLine($"chunk {chunk.Data.Length} {chunk.Index}");
+                    Console.WriteLine($"chunk <- {chunk.Data.Length} {chunk.Index}");
                     target.Enqueue(chunk);
                 }
             }
@@ -156,7 +153,10 @@ namespace ParallelZipNet {
         }
         public Chunk GetChunk() {
             lock(targetLock) {
-                return target.Count > 0 ? target.Dequeue() : null;
+                Chunk chunk = target.Count > 0 ? target.Dequeue() : null;
+                if(chunk != null)
+                    Console.WriteLine($"chunk -> {chunk.Data.Length} {chunk.Index}");
+                return chunk;
             }
         }        
     }
