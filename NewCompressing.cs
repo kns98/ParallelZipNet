@@ -70,25 +70,12 @@ namespace ParallelZipNet {
         }
 
         static Job[] jobs = null;
-        static Thread[] threads = null;
 
         public static IEnumerable<Chunk> AsMultiple(this IEnumerable<Chunk> chunks, int threadCount) {
             if(jobs == null) {
                 jobs = new Job[threadCount];
                 for(int i = 0; i < jobs.Length; i++)
-                    jobs[i] = new Job(chunks);
-            }
-
-            if(threads == null) {
-                threads = new Thread[threadCount];            
-                for(int i = 0; i < threads.Length; i++) {
-                    threads[i] = new Thread(jobs[i].Run) { 
-                        Name = $"thread {i}",
-                        IsBackground = false
-                    };
-                }
-                foreach(var thread in threads)
-                    thread.Start();
+                    jobs[i] = new Job($"thread {i}", chunks);
             }
 
             while(true) {
@@ -104,8 +91,8 @@ namespace ParallelZipNet {
                 }
             }
 
-            foreach(var thread in threads)
-                thread.Join();
+            foreach(var job in jobs)
+                job.Join();
         }
 
         public static void Compress(StreamWrapper source, StreamWrapper dest) {
@@ -125,6 +112,7 @@ namespace ParallelZipNet {
         readonly object finishedLock = new object();
         readonly Queue<Chunk> target = new Queue<Chunk>();
         readonly IEnumerable<Chunk> source;
+        readonly Thread thread;
 
         bool finished = false;
 
@@ -136,10 +124,15 @@ namespace ParallelZipNet {
             }
         }
 
-        public Job(IEnumerable<Chunk> source) {
+        public Job(string name,  IEnumerable<Chunk> source) {
             this.source = source;
+            thread = new Thread(Run) {
+                Name = name,
+                IsBackground = false
+            };
+            thread.Start();
         }
-        public void Run() {            
+        void Run() {            
             foreach(var chunk in source) {                    
                 lock(targetLock) {
                     Console.WriteLine($"chunk <- {chunk.Data.Length} {chunk.Index}");
@@ -150,6 +143,9 @@ namespace ParallelZipNet {
                 finished = true;
             }
 
+        }
+        public void Join() {
+            thread.Join();
         }
         public Chunk GetChunk() {
             lock(targetLock) {
