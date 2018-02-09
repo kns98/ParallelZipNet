@@ -5,13 +5,12 @@ using System.IO.Compression;
 using System;
 using System.Linq;
 using System.Threading;
+using System.Collections;
 
 namespace ParallelZipNet {
     static class NewCompressing {
         static int chunkIndex = 0;        
-        // static byte[] data = null;
-        // static Chunk chunk = null;
-        //static bool isLastChunk;
+
         static readonly object singleLocker = new object();
         
         public static IEnumerable<Chunk> AsSingle(this IEnumerable<Chunk> chunks) {            
@@ -33,6 +32,8 @@ namespace ParallelZipNet {
             bool isLastChunk;
             do {                
                 long bytesToRead = source.BytesToRead;
+                if(bytesToRead == 0)
+                    yield break;
                 isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
                 int readBytes;
                 if(isLastChunk) 
@@ -63,48 +64,71 @@ namespace ParallelZipNet {
 
         public static void WriteCompressed(this IEnumerable<Chunk> chunks, StreamWrapper dest) {
             foreach(var chunk in chunks) {
+                Console.WriteLine($"chunk ==>\t{chunk.Index}\t{chunk.Data.Length}");
                 dest.WriteInt32(chunk.Index);
                 dest.WriteInt32(chunk.Data.Length);
-                dest.WriteBuffer(chunk.Data);
+                dest.WriteBuffer(chunk.Data);                
             }
         }
 
-        static Job[] jobs = null;
-
         public static IEnumerable<Chunk> AsMultiple(this IEnumerable<Chunk> chunks, int threadCount) {
-            if(jobs == null) {
-                jobs = new Job[threadCount];
-                for(int i = 0; i < jobs.Length; i++)
-                    jobs[i] = new Job($"thread {i}", chunks);
-            }
-
-            while(true) {
-                var activeJobs = jobs.Where(j => !j.Finished).ToArray();
-                if(activeJobs.Length == 0)
-                    break;
-                foreach(var job in activeJobs) {
-                    Chunk resultChunk = job.GetChunk();
-                    if(resultChunk != null)
-                        yield return resultChunk;
-                    else
-                        Thread.Yield();
-                }
-            }
-
-            foreach(var job in jobs)
-                job.Join();
+            return new MultipleContext(chunks, threadCount);
         }
 
         public static void Compress(StreamWrapper source, StreamWrapper dest) {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
+            Console.WriteLine($"chunks: {chunkCount}");
+
             ReadDecompressed(source)
                 .AsSingle()
                 .CompressChunks()
-                .AsMultiple(2)
+                .AsMultiple(4)
                 .WriteCompressed(dest);
         }
+    }
+
+    class MultipleContext : IEnumerable<Chunk>, IEnumerator<Chunk> {
+        readonly IEnumerable<Chunk> chunks;
+        readonly Job[] jobs;
+        Chunk current;
+
+        public MultipleContext(IEnumerable<Chunk> chunks, int jobCount) {
+            this.chunks = chunks;
+            jobs = new Job[jobCount];
+            for(int i = 0; i < jobs.Length; i++)
+                jobs[i] = new Job($"thread {i}", chunks);
+        }
+
+
+        void IDisposable.Dispose() {
+            foreach(var job in jobs)
+                job.Join();
+        }
+
+        IEnumerator<Chunk> IEnumerable<Chunk>.GetEnumerator() => this;
+        IEnumerator IEnumerable.GetEnumerator() => this;
+
+        Chunk IEnumerator<Chunk>.Current => current;
+        object IEnumerator.Current => ((IEnumerator<Chunk>)this).Current;
+        bool IEnumerator.MoveNext() {
+            while(true) {
+                var activeJobs = jobs.Where(j => !j.Finished).ToArray();
+                if(activeJobs.Length == 0)
+                    return false;
+                foreach(var job in activeJobs) {
+                    Chunk resultChunk = job.GetChunk();
+                    if(resultChunk != null) {
+                        current = resultChunk;
+                        return true;
+                    }
+                    else
+                        Thread.Yield();
+                }
+            }
+        }
+        void IEnumerator.Reset() { }
     }
 
     class Job {
@@ -135,7 +159,7 @@ namespace ParallelZipNet {
         void Run() {            
             foreach(var chunk in source) {                    
                 lock(targetLock) {
-                    Console.WriteLine($"chunk <- {chunk.Data.Length} {chunk.Index}");
+                    Console.WriteLine($"{Thread.CurrentThread.Name}: <-\t{chunk.Index}\t{chunk.Data.Length}");
                     target.Enqueue(chunk);
                 }
             }
@@ -151,7 +175,7 @@ namespace ParallelZipNet {
             lock(targetLock) {
                 Chunk chunk = target.Count > 0 ? target.Dequeue() : null;
                 if(chunk != null)
-                    Console.WriteLine($"chunk -> {chunk.Data.Length} {chunk.Index}");
+                    Console.WriteLine($"chunk ->\t{chunk.Index}\t{chunk.Data.Length}");
                 return chunk;
             }
         }        
