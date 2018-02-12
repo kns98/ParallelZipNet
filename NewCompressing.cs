@@ -67,17 +67,17 @@ namespace ParallelZipNet {
     class DecompressedReader {
         readonly StreamWrapper source;
         int chunkIndex = 0;
+        bool isLastChunk = false;
 
         public DecompressedReader(StreamWrapper source) {
             this.source = source;
         }
 
         public IEnumerable<Chunk> AsEnumerable() {
-            bool isLastChunk;
             do {                
                 long bytesToRead = source.BytesToRead;
-                if(bytesToRead == 0)
-                    yield break;
+                // if(bytesToRead == 0)
+                //     yield break;
                 isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
                 int readBytes;
                 if(isLastChunk) 
