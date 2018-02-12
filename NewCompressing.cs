@@ -9,9 +9,7 @@ using System.Collections;
 
 namespace ParallelZipNet {
     static class NewCompressing {
-        static int chunkIndex = 0;
-
-        static void Log(string action, Chunk chunk) {
+        public static void Log(string action, Chunk chunk) {
             Console.WriteLine($"{Thread.CurrentThread.Name}:\t{action}\t{chunk.Index}\t{chunk.Data.Length}");            
         }
       
@@ -20,26 +18,7 @@ namespace ParallelZipNet {
         }
                 
         public static IEnumerable<Chunk> ReadDecompressed(StreamWrapper source) {
-            bool isLastChunk;
-            do {                
-                long bytesToRead = source.BytesToRead;
-                if(bytesToRead == 0)
-                    yield break;
-                isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
-                int readBytes;
-                if(isLastChunk) 
-                    readBytes = (int)bytesToRead;
-                else
-                    readBytes = Constants.CHUNK_SIZE;
-                byte[] data = source.ReadBuffer(readBytes);
-                Chunk chunk = new Chunk(chunkIndex++, data);
-
-                Log("Read", chunk);
-
-                yield return chunk;
-
-            }
-            while(!isLastChunk);
+            return new DecompressedReader(source).AsEnumerable();
         }
 
         public static IEnumerable<Chunk> CompressChunks(this IEnumerable<Chunk> chunks) {
@@ -82,6 +61,38 @@ namespace ParallelZipNet {
                 .CompressChunks()
                 .AsMultiple(4)
                 .WriteCompressed(dest);
+        }
+    }
+
+    class DecompressedReader {
+        readonly StreamWrapper source;
+        int chunkIndex = 0;
+
+        public DecompressedReader(StreamWrapper source) {
+            this.source = source;
+        }
+
+        public IEnumerable<Chunk> AsEnumerable() {
+            bool isLastChunk;
+            do {                
+                long bytesToRead = source.BytesToRead;
+                if(bytesToRead == 0)
+                    yield break;
+                isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
+                int readBytes;
+                if(isLastChunk) 
+                    readBytes = (int)bytesToRead;
+                else
+                    readBytes = Constants.CHUNK_SIZE;
+                byte[] data = source.ReadBuffer(readBytes);
+                Chunk chunk = new Chunk(chunkIndex++, data);
+
+                NewCompressing.Log("Read", chunk);
+
+                yield return chunk;
+
+            }
+            while(!isLastChunk);            
         }
     }
 
@@ -178,7 +189,6 @@ namespace ParallelZipNet {
         void Run() {            
             foreach(var chunk in source) {                    
                 lock(targetLock) {
-                    //Console.WriteLine($"{Thread.CurrentThread.Name}: <-\t{chunk.Index}\t{chunk.Data.Length}");
                     target.Enqueue(chunk);
                 }
             }
@@ -193,8 +203,6 @@ namespace ParallelZipNet {
         public Chunk GetChunk() {
             lock(targetLock) {
                 Chunk chunk = target.Count > 0 ? target.Dequeue() : null;
-                // if(chunk != null)
-                //     Console.WriteLine($"chunk ->\t{chunk.Index}\t{chunk.Data.Length}");
                 return chunk;
             }
         }        
