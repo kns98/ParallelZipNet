@@ -21,8 +21,7 @@ namespace ParallelZipNet {
             return new DecompressedReader(source).AsEnumerable();
         }
 
-        public static IEnumerable<Chunk> CompressChunks(this IEnumerable<Chunk> chunks) {
-            foreach(var chunk in chunks) {                
+        public static Chunk CompressChunk(Chunk chunk) {
                 MemoryStream compressed;
                 using(compressed = new MemoryStream()) {
                     using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
@@ -35,16 +34,14 @@ namespace ParallelZipNet {
 
                 Log("Comp", compChunk);
 
-                yield return compChunk;
-            }            
+                return compChunk;            
         }
 
-        public static void WriteCompressed(this IEnumerable<Chunk> chunks, StreamWrapper dest) {
-            foreach(var chunk in chunks) {
-                dest.WriteInt32(chunk.Index);
-                dest.WriteInt32(chunk.Data.Length);
-                dest.WriteBuffer(chunk.Data);                
-            }
+
+        public static void WriteCompressed(Chunk chunk, StreamWrapper dest) {
+            dest.WriteInt32(chunk.Index);
+            dest.WriteInt32(chunk.Data.Length);
+            dest.WriteBuffer(chunk.Data);                
         }
 
         public static IEnumerable<Chunk> AsMultiple(this IEnumerable<Chunk> chunks, int threadCount) {
@@ -56,11 +53,13 @@ namespace ParallelZipNet {
             dest.WriteInt32(chunkCount);
 
 
-            ReadDecompressed(source)
+            var chunks = ReadDecompressed(source)
                 .AsSingle()
-                .CompressChunks()
-                .AsMultiple(4)
-                .WriteCompressed(dest);
+                .Select(CompressChunk)
+                .AsMultiple(4);
+
+            foreach(var chunk in chunks)
+                WriteCompressed(chunk, dest);            
         }
     }
 
