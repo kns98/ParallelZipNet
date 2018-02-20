@@ -83,24 +83,34 @@ namespace ParallelZipNet {
 
       public interface IParallelContext<T> {
         IParallelContext<T> Select(Func<T, T> transform);
+        IParallelContext<T> Do(Action<T> action);
         IEnumerable<T> AsEnumerable();
     }
 
+    // public interface IParallelAction {
+    //     object Run(object data);
+    // }
+
     public class ParallelContext<T> : IParallelContext<T> where T : class {
-        readonly Job2<T>[] jobs;
+        readonly Job<T>[] jobs;
         readonly List<Func<T, T>> actions = new List<Func<T, T>>();
 
         public ParallelContext(int jobNumber, IEnumerable<T> source) {
-            var singleContext = new SingleContext2<T>(source);
-            jobs = new Job2<T>[jobNumber];
+            var singleContext = new SingleContext<T>(source);
+            jobs = new Job<T>[jobNumber];
             for(int i = 0; i < jobs.Length; i++)
-                jobs[i] = new Job2<T>($"thread {i}", actions, singleContext.AsEnumerable());
+                jobs[i] = new Job<T>($"thread {i}", actions, singleContext.AsEnumerable());
         }
 
         IParallelContext<T> IParallelContext<T>.Select(Func<T, T> action) {
             actions.Add(action);
             return this;
-        }    
+        }
+
+        IParallelContext<T> IParallelContext<T>.Do(Action<T> action) {
+            // actions.Add(action);
+            return this;
+        }
         IEnumerable<T> IParallelContext<T>.AsEnumerable() {
             foreach(var job in jobs)
                 job.Start();
@@ -125,10 +135,10 @@ namespace ParallelZipNet {
         }
     }
 
-    public class SingleContext2<T> where T : class {
+    public class SingleContext<T> where T : class {
         readonly IEnumerator<T> sourceEnum;
 
-        public SingleContext2(IEnumerable<T> source) {
+        public SingleContext(IEnumerable<T> source) {
             sourceEnum = source.GetEnumerator();
         }
 
@@ -146,7 +156,7 @@ namespace ParallelZipNet {
         }
     }
 
-    public class Job2<T> where T : class {
+    public class Job<T> where T : class {
         readonly string name;
         readonly IEnumerable<Func<T, T>> actions;
         readonly Queue<T> accumulator = new Queue<T>();
@@ -168,7 +178,7 @@ namespace ParallelZipNet {
             }
         }     
 
-        public Job2(string name, IEnumerable<Func<T, T>> actions, IEnumerable<T> source) {
+        public Job(string name, IEnumerable<Func<T, T>> actions, IEnumerable<T> source) {
             this.name = name;
             this.actions = actions;
             this.source = source;
