@@ -49,7 +49,7 @@ namespace ParallelZipNet {
             var threadName = Thread.CurrentThread.Name;
             if(string.IsNullOrEmpty(threadName))
                 threadName = "thread MAIN";
-            Console.WriteLine($"{threadName}:\t{action}\t{chunk.Index}\t{chunk.Data.Length}");            
+            Console.WriteLine($"{threadName}:\t{action}\t{chunk?.Index}\t{chunk?.Data.Length}");            
         }      
 
         public static void Compress(StreamWrapper source, StreamWrapper dest) {
@@ -57,21 +57,15 @@ namespace ParallelZipNet {
             dest.WriteInt32(chunkCount);
 
             var chunks = ReadSource(source)
-                .Select(x => {
-                    NewCompressing.Log("Read", x);
-                    return x;
-                })
-                .AsParallel(4)
-                .Select(CompressChunk)
-                .Select(x => {
-                    NewCompressing.Log("Comp", x);
-                    return x;
-                })
+                .AsParallel(Math.Max(Environment.ProcessorCount - 1, 1))
+                .Do(x => Log("Read", x))
+                .Map(CompressChunk)
+                .Do(x => Log("Comp", x))
                 .AsEnumerable();
 
             foreach(var chunk in chunks) {
                 WriteCompressed(chunk, dest);
-                NewCompressing.Log("Written", chunk);
+                Log("Written", chunk);
             }
         }
 
@@ -82,38 +76,38 @@ namespace ParallelZipNet {
     }
 
       public interface IParallelContext<T> {
-        IParallelContext<T> Select(Func<T, T> transform);
+        IParallelContext<T> Map(Func<T, T> action);
         IParallelContext<T> Do(Action<T> action);
         IEnumerable<T> AsEnumerable();
     }
 
-    // public interface IParallelAction {
-    //     object Run(object data);
-    // }
-
-    public class ParallelContext<T> : IParallelContext<T> where T : class {
+    public class ParallelContext<T> : IParallelContext<T> where T : class {        
         readonly Job<T>[] jobs;
-        readonly List<Func<T, T>> actions = new List<Func<T, T>>();
+        IEnumerable<T> expression;
 
-        public ParallelContext(int jobNumber, IEnumerable<T> source) {
-            var singleContext = new SingleContext<T>(source);
-            jobs = new Job<T>[jobNumber];
-            for(int i = 0; i < jobs.Length; i++)
-                jobs[i] = new Job<T>($"thread {i}", actions, singleContext.AsEnumerable());
+        public ParallelContext(int jobNumber, IEnumerable<T> source) {            
+            jobs = Enumerable.Range(1, jobNumber)
+                .Select(i => new Job<T>($"thread {i}"))
+                .ToArray();
+            expression = new SingleContext<T>(source)
+                .AsEnumerable();
         }
 
-        IParallelContext<T> IParallelContext<T>.Select(Func<T, T> action) {
-            actions.Add(action);
+        IParallelContext<T> IParallelContext<T>.Map(Func<T, T> action) {
+            expression = expression.Select(action);
             return this;
         }
 
         IParallelContext<T> IParallelContext<T>.Do(Action<T> action) {
-            // actions.Add(action);
+            expression = expression.Select(x => {
+                action(x);
+                return x;
+            });
             return this;
         }
-        IEnumerable<T> IParallelContext<T>.AsEnumerable() {
+        IEnumerable<T> IParallelContext<T>.AsEnumerable() {            
             foreach(var job in jobs)
-                job.Start();
+                job.Start(expression);
 
             while(true) {
                 var jobsAlive = jobs.Where(job => job.IsAlive).ToArray();
@@ -157,11 +151,9 @@ namespace ParallelZipNet {
     }
 
     public class Job<T> where T : class {
-        readonly string name;
-        readonly IEnumerable<Func<T, T>> actions;
         readonly Queue<T> accumulator = new Queue<T>();
         readonly Thread thread;
-        readonly IEnumerable<T> source;
+        IEnumerable<T> expression;
 
         public bool IsAlive { 
             get {
@@ -178,17 +170,15 @@ namespace ParallelZipNet {
             }
         }     
 
-        public Job(string name, IEnumerable<Func<T, T>> actions, IEnumerable<T> source) {
-            this.name = name;
-            this.actions = actions;
-            this.source = source;
+        public Job(string name) {
             thread = new Thread(Run) {
                 Name = name,
                 IsBackground = false
             };
-
+            
         }
-        public void Start() {
+        public void Start(IEnumerable<T> expression) {
+            this.expression = expression;
             thread.Start();
         }
 
@@ -196,12 +186,8 @@ namespace ParallelZipNet {
             thread.Join();
         }
 
-        void Run() {
-            IEnumerable<T> results = source;
-            foreach(var action in actions)  
-                results = results.Select(action);            
-            
-            foreach(T result in results) {
+        void Run() {           
+            foreach(T result in expression) {
                 lock(accumulator) {
                     accumulator.Enqueue(result);
                 }
