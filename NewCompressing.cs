@@ -39,12 +39,6 @@ namespace ParallelZipNet {
             return new Chunk(chunk.Index, compressed.ToArray());            
         }
 
-        static void WriteCompressed(Chunk chunk, StreamWrapper dest) {
-            dest.WriteInt32(chunk.Index);
-            dest.WriteInt32(chunk.Data.Length);
-            dest.WriteBuffer(chunk.Data);                
-        }
-
         public static void Log(string action, Chunk chunk) {
             var threadName = Thread.CurrentThread.Name;
             if(string.IsNullOrEmpty(threadName))
@@ -64,50 +58,42 @@ namespace ParallelZipNet {
                 .AsEnumerable();
 
             foreach(var chunk in chunks) {
-                WriteCompressed(chunk, dest);
+                dest.WriteInt32(chunk.Index);
+                dest.WriteInt32(chunk.Data.Length);
+                dest.WriteBuffer(chunk.Data);                
                 Log("Written", chunk);
             }
         }
 
-        public static IParallelContext<Chunk> AsParallel(this IEnumerable<Chunk> source, int jobNumber) {
-            return new ParallelContext<Chunk>(jobNumber, source);
+    }
+
+    public static class ParallelContextBuilder {
+        public static ParallelContext<T> AsParallel<T>(this IEnumerable<T> enumeration, int jobNumber) where T : class {
+            return new ParallelContext<T>(new LockedContext<T>(enumeration).AsEnumerable(), jobNumber);
+        }
+    }
+
+    public class ParallelContext<T> where T : class  {        
+        readonly IEnumerable<T> enumeration;
+        readonly int jobNumber;
+
+        public ParallelContext(IEnumerable<T> enumeration, int jobNumber) {
+            this.enumeration = enumeration;
+            this.jobNumber = jobNumber;
         }
 
-    }
+        public ParallelContext<U> Map<U>(Func<T, U> transform) where U : class {
+            return new ParallelContext<U>(enumeration.Select(transform), jobNumber);
+        }
 
-      public interface IParallelContext<T> {
-        IParallelContext<T> Map(Func<T, T> action);
-        IParallelContext<T> Do(Action<T> action);
-        IEnumerable<T> AsEnumerable();
-    }
+        public ParallelContext<T> Do(Action<T> action) {
+            return Map<T>(t => { action(t); return t; });
+        }
 
-    public class ParallelContext<T> : IParallelContext<T> where T : class {        
-        readonly Job<T>[] jobs;
-        IEnumerable<T> expression;
-
-        public ParallelContext(int jobNumber, IEnumerable<T> source) {            
-            jobs = Enumerable.Range(1, jobNumber)
-                .Select(i => new Job<T>($"thread {i}"))
+        public IEnumerable<T> AsEnumerable() {
+            Job<T>[] jobs = Enumerable.Range(1, jobNumber)
+                .Select(i => new Job<T>($"thread {i}", enumeration))
                 .ToArray();
-            expression = new SingleContext<T>(source)
-                .AsEnumerable();
-        }
-
-        IParallelContext<T> IParallelContext<T>.Map(Func<T, T> action) {
-            expression = expression.Select(action);
-            return this;
-        }
-
-        IParallelContext<T> IParallelContext<T>.Do(Action<T> action) {
-            expression = expression.Select(x => {
-                action(x);
-                return x;
-            });
-            return this;
-        }
-        IEnumerable<T> IParallelContext<T>.AsEnumerable() {            
-            foreach(var job in jobs)
-                job.Start(expression);
 
             while(true) {
                 var jobsAlive = jobs.Where(job => job.IsAlive).ToArray();
@@ -117,7 +103,7 @@ namespace ParallelZipNet {
 
                 foreach(var job in jobsAlive) {
                     T result = job.Result;
-                    if(result != null)
+                    if(result != default(T))
                         yield return result;
                     else
                         Thread.Yield();
@@ -125,22 +111,22 @@ namespace ParallelZipNet {
             }
 
             foreach(var job in jobs)
-                job.Finish();
+                job.Dispose();
         }
     }
 
-    public class SingleContext<T> where T : class {
-        readonly IEnumerator<T> sourceEnum;
+    public class LockedContext<T> where T : class {
+        readonly IEnumerator<T> enumerator;
 
-        public SingleContext(IEnumerable<T> source) {
-            sourceEnum = source.GetEnumerator();
+        public LockedContext(IEnumerable<T> enumeration) {
+            enumerator = enumeration.GetEnumerator();
         }
 
         public IEnumerable<T> AsEnumerable() {
             T result;
             while(true) {
-                lock(sourceEnum) {
-                    result = sourceEnum.MoveNext() ? sourceEnum.Current : null;
+                lock(enumerator) {
+                    result = enumerator.MoveNext() ? enumerator.Current : null;
                 }                
                 if(result != null)
                     yield return result;                    
@@ -150,46 +136,43 @@ namespace ParallelZipNet {
         }
     }
 
-    public class Job<T> where T : class {
-        readonly Queue<T> accumulator = new Queue<T>();
-        readonly Thread thread;
-        IEnumerable<T> expression;
+    public class Job<T> : IDisposable where T : class {
+        readonly Queue<T> results = new Queue<T>();        
+        readonly Thread thread;        
+        readonly IEnumerable<T> enumeration;
 
         public bool IsAlive { 
             get {
-                lock(accumulator) {
-                    return accumulator.Count > 0 || thread.IsAlive;
+                lock(results) {
+                    return results.Count > 0 || thread.IsAlive;
                 }
             }
         }
         public T Result {
             get {
-                lock(accumulator) {
-                    return accumulator.Count > 0 ? accumulator.Dequeue() : null;
+                lock(results) {
+                    return results.Count > 0 ? results.Dequeue() : null;
                 }
             }
         }     
 
-        public Job(string name) {
+        public Job(string name, IEnumerable<T> enumeration) {
+            this.enumeration = enumeration;
             thread = new Thread(Run) {
                 Name = name,
                 IsBackground = false
-            };
-            
-        }
-        public void Start(IEnumerable<T> expression) {
-            this.expression = expression;
-            thread.Start();
+            };            
+            thread.Start();            
         }
 
-        public void Finish() {
+        public void Dispose() {
             thread.Join();
         }
 
         void Run() {           
-            foreach(T result in expression) {
-                lock(accumulator) {
-                    accumulator.Enqueue(result);
+            foreach(T result in enumeration) {
+                lock(results) {
+                    results.Enqueue(result);
                 }
             }
         }        
