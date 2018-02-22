@@ -54,7 +54,7 @@ namespace ParallelZipNet {
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
-            var chunks = ReadSource(source)
+            var chunks = ReadSource(source) 
                 .AsParallel(jobNumber)                
                 .Do(x => Log("Read", x))
                 .Map(CompressChunk)
@@ -119,6 +119,7 @@ namespace ParallelZipNet {
                     break;
                 }                   
                 
+                // It could be better to make error checking more often
                 foreach(var job in jobs) {
                     T result = null;
                     while((result = job.Result) != null)
