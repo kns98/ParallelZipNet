@@ -50,20 +50,26 @@ namespace ParallelZipNet {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
-            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);
+            var cancellationToken = new CancellationToken();
 
+            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
+            
             var chunks = ReadSource(source)
                 .AsParallel(jobNumber)                
                 .Do(x => Log("Read", x))
                 .Map(CompressChunk)
                 .Do(x => Log("Comp", x))                
-                .AsEnumerable(null, err => Log($"Error Happened: {err.Message}", null));
-
+                .AsEnumerable(cancellationToken, err => Log($"Error Happened: {err.Message}", null));            
+            
             foreach(var chunk in chunks) {
                 dest.WriteInt32(chunk.Index);
                 dest.WriteInt32(chunk.Data.Length);
                 dest.WriteBuffer(chunk.Data);                
                 Log("Written", chunk);
+                // if(chunk.Index > 15) {
+                //     Log("CANCEL", null);
+                //     cancellationToken.Cancel();
+                // }
             }
         }
 
