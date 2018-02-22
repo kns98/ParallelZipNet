@@ -50,12 +50,14 @@ namespace ParallelZipNet {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
+            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);
+
             var chunks = ReadSource(source)
-                .AsParallel(Math.Max(Environment.ProcessorCount - 1, 1))
+                .AsParallel(jobNumber)                
                 .Do(x => Log("Read", x))
                 .Map(CompressChunk)
-                .Do(x => Log("Comp", x))
-                .AsEnumerable();
+                .Do(x => Log("Comp", x))                
+                .AsEnumerable(null, err => Log($"Error Happened: {err.Message}", null));
 
             foreach(var chunk in chunks) {
                 dest.WriteInt32(chunk.Index);
@@ -75,7 +77,7 @@ namespace ParallelZipNet {
 
     public class ParallelContext<T> where T : class  {        
         readonly IEnumerable<T> enumeration;
-        readonly int jobNumber;
+        readonly int jobNumber;        
 
         public ParallelContext(IEnumerable<T> enumeration, int jobNumber) {
             this.enumeration = enumeration;
@@ -90,24 +92,38 @@ namespace ParallelZipNet {
             return Map<T>(t => { action(t); return t; });
         }
 
-        public IEnumerable<T> AsEnumerable() {
+        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, Action<Exception> errorHandler = null) {
+            if(cancellationToken == null)
+                cancellationToken = new CancellationToken();
+
             Job<T>[] jobs = Enumerable.Range(1, jobNumber)
-                .Select(i => new Job<T>($"thread {i}", enumeration))
+                .Select(i => new Job<T>($"thread {i}", enumeration, cancellationToken))
                 .ToArray();
 
             while(true) {
-                var jobsAlive = jobs.Where(job => job.IsAlive).ToArray();
+                var failedJobs = jobs
+                    .Where(job => job.Error != null)
+                    .ToArray();
 
-                if(jobsAlive.Length == 0)
+                if(failedJobs.Length > 0) {
+                    cancellationToken.Cancel();
+                    if(errorHandler != null)
+                        foreach(var job in failedJobs)
+                            errorHandler(job.Error);                    
                     break;
-
-                foreach(var job in jobsAlive) {
-                    T result = job.Result;
-                    if(result != default(T))
+                }                   
+                
+                foreach(var job in jobs) {
+                    T result = null;
+                    while((result = job.Result) != null)
                         yield return result;
-                    else
-                        Thread.Yield();
                 }
+
+                bool stillAlive = jobs.Any(job => job.IsAlive);
+                if(stillAlive)
+                    Thread.Yield();
+                else
+                    break;               
             }
 
             foreach(var job in jobs)
@@ -140,14 +156,10 @@ namespace ParallelZipNet {
         readonly Queue<T> results = new Queue<T>();        
         readonly Thread thread;        
         readonly IEnumerable<T> enumeration;
-
-        public bool IsAlive { 
-            get {
-                lock(results) {
-                    return results.Count > 0 || thread.IsAlive;
-                }
-            }
-        }
+        readonly CancellationToken cancellationToken;
+        public Exception Error { get; private set; }
+        public bool IsAlive { get { return thread.IsAlive; }  }
+        
         public T Result {
             get {
                 lock(results) {
@@ -156,8 +168,9 @@ namespace ParallelZipNet {
             }
         }     
 
-        public Job(string name, IEnumerable<T> enumeration) {
+        public Job(string name, IEnumerable<T> enumeration, CancellationToken cancellationToken) {
             this.enumeration = enumeration;
+            this.cancellationToken = cancellationToken;
             thread = new Thread(Run) {
                 Name = name,
                 IsBackground = false
@@ -169,13 +182,28 @@ namespace ParallelZipNet {
             thread.Join();
         }
 
-        void Run() {           
-            foreach(T result in enumeration) {
-                lock(results) {
-                    results.Enqueue(result);
+        void Run() {
+            try {           
+                foreach(T result in enumeration) {
+                    if(cancellationToken.IsCancelled)
+                        break;                    
+                    lock(results) {
+                        results.Enqueue(result);
+                    }
                 }
             }
+            catch(Exception e) {
+                Error = e;
+            }
         }        
+    }
+}
+
+public class CancellationToken {
+    public bool IsCancelled { get; private set; }
+    
+    public void Cancel() {
+        IsCancelled = true;
     }
 }
 
