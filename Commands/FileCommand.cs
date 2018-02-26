@@ -4,7 +4,7 @@ using System.IO;
 
 namespace ParallelZipNet.Commands {
     abstract class FileCommand : ICommand {
-        Engine engine = null;
+        // Engine engine = null;
 
         public bool CheckArgs(string[] args) {
             return args.Length == 3;
@@ -37,8 +37,8 @@ namespace ParallelZipNet.Commands {
         }
 
         public void ShutDown() {
-            if(engine != null)
-                engine.ShutDown();
+            // if(engine != null)
+            //     engine.ShutDown();
         }
 
         protected abstract IChunkProcessor CreateChunkProcessor(StreamWrapper stream, ConcurentChunkQueue chunkQueue);
