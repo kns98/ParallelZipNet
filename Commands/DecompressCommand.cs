@@ -7,7 +7,7 @@ namespace ParallelZipNet.Commands {
         }  
 
         protected override void Process(StreamWrapper stream) {
-            NewDecompressing.Decompress(stream, stream);
+            NewCompressing.Decompress(stream, stream);
         }
 
     }

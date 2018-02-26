@@ -28,6 +28,20 @@ namespace ParallelZipNet {
             
         }
 
+        static IEnumerable<Chunk> ReadSourceCompressed(StreamWrapper source, int chunkCount) {
+            for(int i = 0; i < chunkCount; i++) {
+                int chunkIndex = source.ReadInt32();
+                if(chunkIndex < 0)
+                    throw new InvalidDataException("FileCorruptedMessage_1");
+
+                int chunkLength = source.ReadInt32();
+                if(chunkLength <= 0 || chunkLength > source.BytesToRead)
+                    throw new InvalidDataException("FileCorruptedMessage_2");
+
+                yield return new Chunk(chunkIndex, source.ReadBuffer(chunkLength));                
+            }
+        }        
+
         static Chunk CompressChunk(Chunk chunk) {
             MemoryStream compressed;
             using(compressed = new MemoryStream()) {
@@ -37,6 +51,19 @@ namespace ParallelZipNet {
                 }
             }       
             return new Chunk(chunk.Index, compressed.ToArray());            
+        }
+
+        static Chunk DecompressChunk(Chunk chunk) {
+            MemoryStream compressed;
+            MemoryStream decompressed;
+            using(compressed = new MemoryStream(chunk.Data)) {
+                using(var gzip = new GZipStream(compressed, CompressionMode.Decompress)) {
+                    using(decompressed = new MemoryStream()) {
+                        gzip.CopyTo(decompressed);                        
+                    }
+                }
+            }
+            return new Chunk(chunk.Index, decompressed.ToArray());            
         }
 
         public static void Log(string action, Chunk chunk) {
@@ -73,6 +100,27 @@ namespace ParallelZipNet {
             }
         }
 
+        public static void Decompress(StreamWrapper source, StreamWrapper dest) {
+            int chunkCount = source.ReadInt32();
+            if(chunkCount <= 0)
+                throw new InvalidDataException("FileCorruptedMessage_3");
+                
+            var cancellationToken = new CancellationToken();
+
+            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
+
+            var chunks = ReadSourceCompressed(source, chunkCount)
+                .AsParallel(jobNumber)
+                .Do(x => Log("Read", x))
+                .Map(DecompressChunk)
+                .Do(x => Log("Decomp", x))
+                .AsEnumerable(cancellationToken, err => Log($"Error Happened: {err.Message}", null));
+
+            foreach(var chunk in chunks) {
+                long position = chunk.Index * Constants.CHUNK_SIZE;
+                dest.WriteBuffer(chunk.Data, position);                
+            }
+        }
     }
 
     public static class ParallelContextBuilder {
