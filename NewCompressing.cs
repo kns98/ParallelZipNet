@@ -4,8 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System;
 using System.Linq;
-using System.Threading;
 using System.Collections;
+using ParallelZipNet.Threading;
+using System.Threading;
 
 namespace ParallelZipNet {
     static class NewCompressing {
@@ -77,7 +78,7 @@ namespace ParallelZipNet {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
 
-            var cancellationToken = new CancellationToken();
+            var cancellationToken = new Threading.CancellationToken();
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
@@ -105,7 +106,7 @@ namespace ParallelZipNet {
             if(chunkCount <= 0)
                 throw new InvalidDataException("FileCorruptedMessage_3");
                 
-            var cancellationToken = new CancellationToken();
+            var cancellationToken = new Threading.CancellationToken();
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
 
@@ -122,149 +123,4 @@ namespace ParallelZipNet {
             }
         }
     }
-
-    public static class ParallelContextBuilder {
-        public static ParallelContext<T> AsParallel<T>(this IEnumerable<T> enumeration, int jobNumber) where T : class {
-            return new ParallelContext<T>(new LockedContext<T>(enumeration).AsEnumerable(), jobNumber);
-        }
-    }
-
-    public class ParallelContext<T> where T : class  {        
-        readonly IEnumerable<T> enumeration;
-        readonly int jobNumber;        
-
-        public ParallelContext(IEnumerable<T> enumeration, int jobNumber) {
-            this.enumeration = enumeration;
-            this.jobNumber = jobNumber;
-        }
-
-        public ParallelContext<U> Map<U>(Func<T, U> transform) where U : class {
-            return new ParallelContext<U>(enumeration.Select(transform), jobNumber);
-        }
-
-        public ParallelContext<T> Do(Action<T> action) {
-            return Map<T>(t => { action(t); return t; });
-        }
-
-        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, Action<Exception> errorHandler = null) {
-            if(cancellationToken == null)
-                cancellationToken = new CancellationToken();
-
-            Job<T>[] jobs = Enumerable.Range(1, jobNumber)
-                .Select(i => new Job<T>($"thread {i}", enumeration, cancellationToken))
-                .ToArray();
-
-            while(true) {
-                var failedJobs = jobs
-                    .Where(job => job.Error != null)
-                    .ToArray();
-
-                if(failedJobs.Length > 0) {
-                    cancellationToken.Cancel();
-                    if(errorHandler != null)
-                        foreach(var job in failedJobs)
-                            errorHandler(job.Error);                    
-                    break;
-                }                   
-                
-                IEnumerable<T> results = jobs
-                    .Select(job => job.GetResult())
-                    .Where(r => r != null);
-
-                foreach(T result in results)
-                    yield return result;
-
-                if(jobs.All(job => job.IsFinished))
-                    break;
-                else
-                    Thread.Yield();                    
-            }
-
-            foreach(var job in jobs)
-                job.Dispose();
-        }
-    }
-
-    public class LockedContext<T> where T : class {
-        readonly IEnumerator<T> enumerator;
-
-        public LockedContext(IEnumerable<T> enumeration) {
-            enumerator = enumeration.GetEnumerator();
-        }
-
-        public IEnumerable<T> AsEnumerable() {
-            T result;
-            while(true) {
-                lock(enumerator) {
-                    result = enumerator.MoveNext() ? enumerator.Current : null;
-                }                
-                if(result != null)
-                    yield return result;                    
-                else 
-                    yield break;                    
-            }
-        }
-    }
-
-    public class Job<T> : IDisposable where T : class {
-        readonly Queue<T> results = new Queue<T>();        
-        readonly Thread thread;        
-        readonly IEnumerable<T> enumeration;
-        readonly CancellationToken cancellationToken;
-        public Exception Error { get; private set; }
-        public bool IsFinished { 
-            get { 
-                if(thread.IsAlive)
-                    return false;
-                lock(results) {
-                    return results.Count  == 0;                    
-                }
-            }
-        }        
-
-        public Job(string name, IEnumerable<T> enumeration, CancellationToken cancellationToken) {
-            this.enumeration = enumeration;
-            this.cancellationToken = cancellationToken;
-            thread = new Thread(Run) {
-                Name = name,
-                IsBackground = false
-            };            
-            thread.Start();            
-        }
-
-        public T GetResult() {
-            lock(results) {
-                return results.Count > 0 ? results.Dequeue() : null;
-            }
-        }             
-
-        public void Dispose() {
-            thread.Join();
-        }
-
-        void Run() {
-            try {           
-                foreach(T result in enumeration) {
-                    if(cancellationToken.IsCancelled)
-                        break;
-
-                    lock(results) {
-                        results.Enqueue(result);
-                    }
-                }
-            }
-            catch(Exception e) {
-                Error = e;
-            }
-        }        
-    }
 }
-
-public class CancellationToken {
-    public bool IsCancelled { get; private set; }
-    
-    public void Cancel() {
-        IsCancelled = true;
-    }
-}
-
