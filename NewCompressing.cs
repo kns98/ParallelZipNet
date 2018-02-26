@@ -55,7 +55,7 @@ namespace ParallelZipNet {
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
             var chunks = ReadSource(source) 
-                .AsParallel(jobNumber)                
+                .AsParallel(jobNumber)
                 .Do(x => Log("Read", x))
                 .Map(CompressChunk)
                 .Do(x => Log("Comp", x))                
@@ -119,18 +119,17 @@ namespace ParallelZipNet {
                     break;
                 }                   
                 
-                // It could be better to make error checking more often
-                foreach(var job in jobs) {
-                    T result = null;
-                    while((result = job.Result) != null)
-                        yield return result;
-                }
+                IEnumerable<T> results = jobs
+                    .Select(job => job.Result)
+                    .Where(r => r != null);
 
-                bool stillAlive = jobs.Any(job => job.IsAlive);
-                if(stillAlive)
-                    Thread.Yield();
+                foreach(T result in results)
+                    yield return result;
+
+                if(jobs.All(job => job.IsFinished))
+                    break;
                 else
-                    break;               
+                    Thread.Yield();                    
             }
 
             foreach(var job in jobs)
@@ -165,8 +164,15 @@ namespace ParallelZipNet {
         readonly IEnumerable<T> enumeration;
         readonly CancellationToken cancellationToken;
         public Exception Error { get; private set; }
-        public bool IsAlive { get { return thread.IsAlive; }  }
-        
+        public bool IsFinished { 
+            get { 
+                if(thread.IsAlive)
+                    return false;
+                lock(results) {
+                    return results.Count  == 0;                    
+                }
+            }
+        }        
         public T Result {
             get {
                 lock(results) {
@@ -193,7 +199,8 @@ namespace ParallelZipNet {
             try {           
                 foreach(T result in enumeration) {
                     if(cancellationToken.IsCancelled)
-                        break;                    
+                        break;
+
                     lock(results) {
                         results.Enqueue(result);
                     }
