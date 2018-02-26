@@ -1,4 +1,4 @@
-﻿namespace ParallelZipNet.ChunkProcessing {
+﻿namespace ParallelZipNet {
     class Chunk {
         public int Index { get; private set; }
         public byte[] Data { get; private set; }

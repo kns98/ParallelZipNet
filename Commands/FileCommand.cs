@@ -1,11 +1,8 @@
-﻿using ParallelZipNet.ChunkProcessing;
-using System;
+﻿using System;
 using System.IO;
 
 namespace ParallelZipNet.Commands {
     abstract class FileCommand : ICommand {
-        // Engine engine = null;
-
         public bool CheckArgs(string[] args) {
             return args.Length == 3;
         }
@@ -40,9 +37,6 @@ namespace ParallelZipNet.Commands {
             // if(engine != null)
             //     engine.ShutDown();
         }
-
-        protected abstract IChunkProcessor CreateChunkProcessor(StreamWrapper stream, ConcurentChunkQueue chunkQueue);
-
         protected abstract void Process(StreamWrapper stream);
 
         int ProcessFiles(FileInfo srcInfo, FileInfo destInfo) {
@@ -50,20 +44,6 @@ namespace ParallelZipNet.Commands {
                 Process(stream);
                 return 0;
             }
-
-            // var chunkQueue = new ConcurentChunkQueue();
-            // var chunkProcessor = CreateChunkProcessor(stream, chunkQueue);
-            // engine = new Engine(chunkProcessor, chunkQueue);
-            // try {
-            //     engine.Run();
-            //     return 0;
-            // }
-            // finally {
-            //     if(engine != null) {
-            //         engine.Dispose();
-            //         engine = null;
-            //     }
-            // }
         }
     }
 }
