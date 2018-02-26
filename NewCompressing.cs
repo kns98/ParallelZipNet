@@ -120,7 +120,7 @@ namespace ParallelZipNet {
                 }                   
                 
                 IEnumerable<T> results = jobs
-                    .Select(job => job.Result)
+                    .Select(job => job.GetResult())
                     .Where(r => r != null);
 
                 foreach(T result in results)
@@ -173,13 +173,6 @@ namespace ParallelZipNet {
                 }
             }
         }        
-        public T Result {
-            get {
-                lock(results) {
-                    return results.Count > 0 ? results.Dequeue() : null;
-                }
-            }
-        }     
 
         public Job(string name, IEnumerable<T> enumeration, CancellationToken cancellationToken) {
             this.enumeration = enumeration;
@@ -190,6 +183,12 @@ namespace ParallelZipNet {
             };            
             thread.Start();            
         }
+
+        public T GetResult() {
+            lock(results) {
+                return results.Count > 0 ? results.Dequeue() : null;
+            }
+        }             
 
         public void Dispose() {
             thread.Join();
