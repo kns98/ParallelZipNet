@@ -6,21 +6,22 @@ using System.Linq;
 using System.Collections;
 using ParallelZipNet.Threading;
 using System.Threading;
+using ParallelZipNet.ReadWrite;
 
 namespace ParallelZipNet {
     static class NewCompressing {
-        static IEnumerable<Chunk> ReadSource(StreamWrapper source) {
+        static IEnumerable<Chunk> ReadSource(IBinaryReader reader) {
             bool isLastChunk;
             int chunkIndex = 0;
             do {                
-                long bytesToRead = source.BytesToRead;
+                long bytesToRead = reader.Length - reader.Position;;
                 isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
                 int readBytes;
                 if(isLastChunk) 
                     readBytes = (int)bytesToRead;
                 else
                     readBytes = Constants.CHUNK_SIZE;
-                byte[] data = source.ReadBuffer(readBytes);
+                byte[] data = reader.ReadBuffer(readBytes);
                 yield return new Chunk(chunkIndex++, data);
 
             }
@@ -28,17 +29,18 @@ namespace ParallelZipNet {
             
         }
 
-        static IEnumerable<Chunk> ReadSourceCompressed(StreamWrapper source, int chunkCount) {
+        static IEnumerable<Chunk> ReadSourceCompressed(IBinaryReader reader, int chunkCount) {
             for(int i = 0; i < chunkCount; i++) {
-                int chunkIndex = source.ReadInt32();
+                int chunkIndex = reader.ReadInt32();
                 if(chunkIndex < 0)
                     throw new InvalidDataException("FileCorruptedMessage_1");
 
-                int chunkLength = source.ReadInt32();
-                if(chunkLength <= 0 || chunkLength > source.BytesToRead)
+                int chunkLength = reader.ReadInt32();
+                long bytesToRead = reader.Length - reader.Position;
+                if(chunkLength <= 0 || chunkLength > bytesToRead)
                     throw new InvalidDataException("FileCorruptedMessage_2");
 
-                yield return new Chunk(chunkIndex, source.ReadBuffer(chunkLength));                
+                yield return new Chunk(chunkIndex, reader.ReadBuffer(chunkLength));                
             }
         }        
 
@@ -73,13 +75,13 @@ namespace ParallelZipNet {
             Console.WriteLine($"{threadName}:\t{action}\t{chunk?.Index}\t{chunk?.Data.Length}");            
         }      
 
-        public static void Compress(StreamWrapper source, StreamWrapper dest, Threading.CancellationToken cancellationToken) {
-            int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
-            dest.WriteInt32(chunkCount);
+        public static void Compress(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken) {
+            int chunkCount = Convert.ToInt32(reader.Length / Constants.CHUNK_SIZE) + 1;
+            writer.WriteInt32(chunkCount);
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
-            var chunks = ReadSource(source) 
+            var chunks = ReadSource(reader) 
                 .AsParallel(jobNumber)
                 .Do(x => Log("Read", x))
                 .Map(CompressChunk)
@@ -87,9 +89,9 @@ namespace ParallelZipNet {
                 .AsEnumerable(cancellationToken, err => Log($"Error Happened: {err.Message}", null));            
             
             foreach(var chunk in chunks) {
-                dest.WriteInt32(chunk.Index);
-                dest.WriteInt32(chunk.Data.Length);
-                dest.WriteBuffer(chunk.Data);                
+                writer.WriteInt32(chunk.Index);
+                writer.WriteInt32(chunk.Data.Length);
+                writer.WriteBuffer(chunk.Data);                
                 Log("Written", chunk);
                 // if(chunk.Index > 15) {
                 //     Log("CANCEL", null);
@@ -98,14 +100,14 @@ namespace ParallelZipNet {
             }
         }
 
-        public static void Decompress(StreamWrapper source, StreamWrapper dest, Threading.CancellationToken cancellationToken) {
-            int chunkCount = source.ReadInt32();
+        public static void Decompress(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken) {
+            int chunkCount = reader.ReadInt32();
             if(chunkCount <= 0)
                 throw new InvalidDataException("FileCorruptedMessage_3");                
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
 
-            var chunks = ReadSourceCompressed(source, chunkCount)
+            var chunks = ReadSourceCompressed(reader, chunkCount)
                 .AsParallel(jobNumber)
                 .Do(x => Log("Read", x))
                 .Map(DecompressChunk)
@@ -114,7 +116,7 @@ namespace ParallelZipNet {
 
             foreach(var chunk in chunks) {
                 long position = chunk.Index * Constants.CHUNK_SIZE;
-                dest.WriteBuffer(chunk.Data, position);                
+                writer.WriteBuffer(chunk.Data, position);                
             }
         }
     }

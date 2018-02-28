@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using ParallelZipNet.ReadWrite;
 
 namespace ParallelZipNet {
     class Program {
@@ -18,12 +19,14 @@ namespace ParallelZipNet {
             new Command(
                 new[] { "--compress", "-c" },
                 new[] { argSrc, argDest }, 
-                args => ProcessFile(args[argSrc], args[argDest], (src, dest) => NewCompressing.Compress(src, dest, cancellationToken))),
+                args => ProcessFile(args[argSrc], args[argDest],
+                    (reader, writer) => NewCompressing.Compress(reader, writer, cancellationToken))),
 
             new Command(
                 new[] { "--decompress", "-d" },
                 new[] { argSrc, argDest },
-                args => ProcessFile(args[argSrc], args[argDest], (src, dest) => NewCompressing.Decompress(src, dest, cancellationToken)))
+                args => ProcessFile(args[argSrc], args[argDest],
+                    (reader, writer) => NewCompressing.Decompress(reader, writer, cancellationToken)))
         };
 
         static int Main(string[] args) {
@@ -60,7 +63,7 @@ namespace ParallelZipNet {
             Console.WriteLine("TODO : Help");
         }
 
-        static void ProcessFile(string src, string dest, Action<StreamWrapper, StreamWrapper> processor) {
+        static void ProcessFile(string src, string dest, Action<IBinaryReader, IBinaryWriter> processor) {
             var srcInfo = new FileInfo(src);
             if(!srcInfo.Exists)
                 throw new Exception($"The \"{src}\" source file doens't exist");
@@ -73,10 +76,10 @@ namespace ParallelZipNet {
                 else
                     throw new CancelledException();
             }
-            using(var stream = new StreamWrapper(srcInfo, destInfo)) {
-                processor(stream, stream);
+            using(var reader = new BinaryFileReader(srcInfo))
+            using(var writer = new BinaryFileWriter(destInfo)) {
+                processor(reader, writer);
             }
-
         }
     }
 }
