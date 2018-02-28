@@ -37,7 +37,7 @@ namespace ParallelZipNet {
                 if(args.Length > 0)
                     command = commands.FirstOrDefault(x => x.IsMatch(args[0]));
                 if(command != null)
-                    command.Run(args.Skip(1).ToArray(), cancellationToken);                
+                    command.Run(args.Skip(1).ToArray());                
                 else
                     helpCommand.Run();
                 Console.WriteLine();
