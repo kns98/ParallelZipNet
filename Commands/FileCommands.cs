@@ -3,29 +3,32 @@ using System.IO;
 
 namespace ParallelZipNet.Commands {
     public static class FileCommands {
-        public static readonly Command Compress = new Command {
-            Keys = new[] { "--compress", "-c" }, 
-            Param = new[] { "@sourcePath", "@destPath" },
-            Action = args => {
-                FileInfo srcInfo = GetSrcInfo(args["@sourcePath"]);
-                FileInfo destInfo = GetDestInfo(args["@destPath"]);
+        const string argSourcePath ="@sourcePath";
+        const string argDestPath ="@sourcePath";
+        
+        public static readonly Command Compress = new Command(
+            new[] { "--compress", "-c" }, 
+            new[] { argSourcePath, argDestPath },
+            args => {
+                FileInfo srcInfo = GetSrcInfo(args[argSourcePath]);
+                FileInfo destInfo = GetDestInfo(args[argDestPath]);
                 using(var stream = new StreamWrapper(srcInfo, destInfo)) {
                     NewCompressing.Compress(stream, stream);
                 }
             }
-        };
+        );
 
-        public static readonly Command Decompress = new Command {
-            Keys = new[] { "--decompress", "-d" }, 
-            Param = new[] { "@sourcePath", "@destPath" },
-            Action = args => {
-                FileInfo srcInfo = GetSrcInfo(args["@sourcePath"]);
-                FileInfo destInfo = GetDestInfo(args["@destPath"]);
+        public static readonly Command Decompress = new Command(
+            new[] { "--decompress", "-d" }, 
+            new[] { argSourcePath, argDestPath },
+            args => {
+                FileInfo srcInfo = GetSrcInfo(args[argSourcePath]);
+                FileInfo destInfo = GetDestInfo(args[argDestPath]);
                 using(var stream = new StreamWrapper(srcInfo, destInfo)) {
                     NewCompressing.Decompress(stream, stream);
                 }
             }
-        };
+        );
 
         static FileInfo GetSrcInfo(string src)  {
             var srcInfo = new FileInfo(src);
