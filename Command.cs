@@ -19,7 +19,7 @@ namespace ParallelZipNet {
 
         public bool IsMatch(string key) => keys.Contains(key);
 
-        public void Run(string[] args = null) {
+        public void Run(string[] args = null, Threading.CancellationToken cancellationToken = null) {
             int length = args?.Length ?? 0;
             if(parameters.Length == length) {
                 var namedArgs = new Dictionary<string, string>();

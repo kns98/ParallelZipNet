@@ -73,11 +73,9 @@ namespace ParallelZipNet {
             Console.WriteLine($"{threadName}:\t{action}\t{chunk?.Index}\t{chunk?.Data.Length}");            
         }      
 
-        public static void Compress(StreamWrapper source, StreamWrapper dest) {
+        public static void Compress(StreamWrapper source, StreamWrapper dest, Threading.CancellationToken cancellationToken) {
             int chunkCount = Convert.ToInt32(source.TotalBytesToRead / Constants.CHUNK_SIZE) + 1;
             dest.WriteInt32(chunkCount);
-
-            var cancellationToken = new Threading.CancellationToken();
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
@@ -100,12 +98,10 @@ namespace ParallelZipNet {
             }
         }
 
-        public static void Decompress(StreamWrapper source, StreamWrapper dest) {
+        public static void Decompress(StreamWrapper source, StreamWrapper dest, Threading.CancellationToken cancellationToken) {
             int chunkCount = source.ReadInt32();
             if(chunkCount <= 0)
-                throw new InvalidDataException("FileCorruptedMessage_3");
-                
-            var cancellationToken = new Threading.CancellationToken();
+                throw new InvalidDataException("FileCorruptedMessage_3");                
 
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
 

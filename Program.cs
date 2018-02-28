@@ -8,62 +8,52 @@ namespace ParallelZipNet {
         const string argSrc ="@src";
         const string argDest ="@dest";
 
+        static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
+
         static readonly Command helpCommand = new Command(new[] { "--help", "-h", "-?" }, _ => Help());
 
         static readonly List<Command> commands = new List<Command> {
             helpCommand,
 
-            new Command(new[] { "--compress", "-c" }, new[] { argSrc, argDest }, 
-                args => ProcessFile(args[argSrc], args[argDest], NewCompressing.Compress)),
+            new Command(
+                new[] { "--compress", "-c" },
+                new[] { argSrc, argDest }, 
+                args => ProcessFile(args[argSrc], args[argDest], (src, dest) => NewCompressing.Compress(src, dest, cancellationToken))),
 
-            new Command(new[] { "--decompress", "-d" }, new[] { argSrc, argDest },
-                args => ProcessFile(args[argSrc], args[argDest], NewCompressing.Decompress))
+            new Command(
+                new[] { "--decompress", "-d" },
+                new[] { argSrc, argDest },
+                args => ProcessFile(args[argSrc], args[argDest], (src, dest) => NewCompressing.Decompress(src, dest, cancellationToken)))
         };
 
         static int Main(string[] args) {
+            Console.CancelKeyPress += (s, e) => {
+                e.Cancel = true;
+                cancellationToken.Cancel();
+            };
+            
             try {
-                if(args.Length > 0) {
-                    Command command = commands.First(x => x.IsMatch(args[0]));
-                    if(command == null)
-                        command = helpCommand;
-                    command.Run(args.Skip(1).ToArray());
-                }
+                Command command = null;
+                if(args.Length > 0)
+                    command = commands.FirstOrDefault(x => x.IsMatch(args[0]));
+                if(command != null)
+                    command.Run(args.Skip(1).ToArray(), cancellationToken);                
+                else
+                    helpCommand.Run();
+                Console.WriteLine();
+                Console.WriteLine("Done.");                                    
                 return 0;
             }
+            catch(CancelledException) {
+                Console.WriteLine();
+                Console.WriteLine("Cancelled.");
+                return 0;                                
+            }
             catch(Exception e) {
+                Console.WriteLine();
                 Console.WriteLine(e.Message);
                 return 1;
             }
-
-
-            // if(args.Length > 0) {
-            //     ICommand command = GetCommand(args);
-            //     if(command != null && command.CheckArgs(args)) {
-            //         Console.CancelKeyPress += (s, e) => {
-            //             e.Cancel = true;
-            //             command.ShutDown();
-            //         };
-            //         try {
-            //             int result = command.Execute(args);
-            //             if(result == 0) {
-            //                 Console.WriteLine();
-            //                 Console.WriteLine("Done.");
-            //             }
-            //             return result;
-            //         }
-            //         catch(CancelledException) {
-            //             Console.WriteLine();
-            //             Console.WriteLine("Cancelled.");
-            //             return 0;
-            //         }
-            //         catch(Exception ex) {
-            //             ConsoleHelper.LogException(ex);
-            //             return 1;
-            //         }
-            //     }
-            // }
-            // ConsoleHelper.LogInvalidCommand();
-            // return 1;
         }
 
         static void Help() {
@@ -81,7 +71,7 @@ namespace ParallelZipNet {
                     destInfo.Delete();
                 }
                 else
-                    new Exception("Cancelled by user");
+                    throw new CancelledException();
             }
             using(var stream = new StreamWrapper(srcInfo, destInfo)) {
                 processor(stream, stream);
