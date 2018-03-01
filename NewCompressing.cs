@@ -14,7 +14,7 @@ namespace ParallelZipNet {
             bool isLastChunk;
             int chunkIndex = 0;
             do {                
-                long bytesToRead = reader.Length - reader.Position;;
+                long bytesToRead = reader.Length - reader.Position;
                 isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
                 int readBytes;
                 if(isLastChunk) 
@@ -115,7 +115,8 @@ namespace ParallelZipNet {
                 .AsEnumerable(cancellationToken, err => Log($"Error Happened: {err.Message}", null));
 
             foreach(var chunk in chunks) {
-                long position = chunk.Index * Constants.CHUNK_SIZE;
+                long position = (long)chunk.Index * Constants.CHUNK_SIZE;
+                // Console.WriteLine($"chunk : {chunk.Index}\tpotision : {position}\tdata : {chunk.Data.Length}");
                 writer.WriteBuffer(chunk.Data, position);                
             }
         }
