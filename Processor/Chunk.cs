@@ -1,5 +1,5 @@
-﻿namespace ParallelZipNet {
-    class Chunk {
+﻿namespace ParallelZipNet.Processor {
+    public class Chunk {
         public int Index { get; private set; }
         public byte[] Data { get; private set; }
 

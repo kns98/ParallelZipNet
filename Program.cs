@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using ParallelZipNet.ReadWrite;
+using ParallelZipNet.Processor;
 
 namespace ParallelZipNet {
     class Program {
@@ -20,13 +21,13 @@ namespace ParallelZipNet {
                 new[] { "--compress", "-c" },
                 new[] { argSrc, argDest }, 
                 args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => NewCompressing.Compress(reader, writer, cancellationToken))),
+                    (reader, writer) => Compressor.Run(reader, writer, cancellationToken))),
 
             new Command(
                 new[] { "--decompress", "-d" },
                 new[] { argSrc, argDest },
                 args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => NewCompressing.Decompress(reader, writer, cancellationToken)))
+                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken)))
         };
 
         static int Main(string[] args) {
