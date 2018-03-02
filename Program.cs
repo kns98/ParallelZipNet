@@ -43,14 +43,14 @@ namespace ParallelZipNet {
                     command.Run(args.Skip(1).ToArray());                
                 else
                     helpCommand.Run();
+
                 Console.WriteLine();
-                Console.WriteLine("Done.");                                    
+                if(cancellationToken.IsCancelled)
+                    Console.WriteLine("Cancelled.");
+                else
+                    Console.WriteLine("Done.");                                    
+
                 return 0;
-            }
-            catch(CancelledException) {
-                Console.WriteLine();
-                Console.WriteLine("Cancelled.");
-                return 0;                                
             }
             catch(Exception e) {
                 Console.WriteLine();
@@ -74,7 +74,7 @@ namespace ParallelZipNet {
                     destInfo.Delete();
                 }
                 else
-                    throw new CancelledException();
+                    return;
             }
             using(var reader = new BinaryFileReader(srcInfo))
             using(var writer = new BinaryFileWriter(destInfo)) {

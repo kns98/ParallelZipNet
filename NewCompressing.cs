@@ -93,10 +93,6 @@ namespace ParallelZipNet {
                 writer.WriteInt32(chunk.Data.Length);
                 writer.WriteBuffer(chunk.Data);                
                 Log("Written", chunk);
-                // if(chunk.Index > 15) {
-                //     Log("CANCEL", null);
-                //     cancellationToken.Cancel();
-                // }
             }
         }
 

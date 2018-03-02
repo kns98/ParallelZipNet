@@ -36,6 +36,9 @@ namespace ParallelZipNet.Threading {
                 .ToArray();
 
             while(true) {
+                if(cancellationToken.IsCancelled)
+                    break;
+
                 var failedJobs = jobs
                     .Where(job => job.Error != null)
                     .ToArray();
