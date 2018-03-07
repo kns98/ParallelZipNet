@@ -18,13 +18,13 @@ namespace ParallelZipNet {
             helpCommand,
 
             new Command(
-                new[] { "--compress", "-c" },
+                new[] { "compress" },
                 new[] { argSrc, argDest }, 
                 args => ProcessFile(args[argSrc], args[argDest],
                     (reader, writer) => Compressor.Run(reader, writer, cancellationToken))),
 
             new Command(
-                new[] { "--decompress", "-d" },
+                new[] { "decompress" },
                 new[] { argSrc, argDest },
                 args => ProcessFile(args[argSrc], args[argDest],
                     (reader, writer) => Decompressor.Run(reader, writer, cancellationToken)))
