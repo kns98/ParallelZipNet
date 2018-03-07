@@ -24,7 +24,8 @@ namespace ParallelZipNet.Processor {
 
             foreach(var chunk in chunks) {
                 long position = (long)chunk.Index * Constants.CHUNK_SIZE;
-                writer.WriteBuffer(chunk.Data, position);  
+                writer.Seek(position);
+                writer.WriteBuffer(chunk.Data);  
                 Log("Written", chunk);              
             }
         }

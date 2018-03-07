@@ -10,30 +10,26 @@ namespace ParallelZipNet.ReadWrite {
     }
     
     public class BinaryFileReader : IBinaryReader, IDisposable {
-        FileStream stream;
+        BinaryReader reader;
 
         public BinaryFileReader(FileInfo info) {
-            stream = info.OpenRead();            
+            reader = new BinaryReader(info.OpenRead());
         }
 
         public void Dispose() {
-            if(stream != null) {
-                stream.Dispose();
-                stream = null;
+            if(reader != null) {
+                reader.Dispose();
+                reader = null;
             }            
         }
 
-        long IBinaryReader.Position => stream.Position;
-        long IBinaryReader.Length => stream.Length;
+        long IBinaryReader.Position => reader.BaseStream.Position;
+        long IBinaryReader.Length => reader.BaseStream.Length;
         int IBinaryReader.ReadInt32() {
-            byte[] buffer = new byte[4];
-            stream.Read(buffer, 0, 4);
-            return BitConverter.ToInt32(buffer, 0);            
+            return reader.ReadInt32();
         }
         byte[] IBinaryReader.ReadBuffer(int length) {
-            byte[] buffer = new byte[length];
-            stream.Read(buffer, 0, length);
-            return buffer;            
+            return reader.ReadBytes(length);
         }
     }
 }

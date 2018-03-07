@@ -6,33 +6,32 @@ namespace ParallelZipNet.ReadWrite {
         long Position { get; } 
         void WriteInt32(int value);
         void WriteBuffer(byte[] buffer);
-        void WriteBuffer(byte[] buffer, long position);
+        void Seek(long position);
     }
 
     public class BinaryFileWriter : IBinaryWriter, IDisposable {
-        FileStream stream;
+        BinaryWriter writer;
 
         public BinaryFileWriter(FileInfo info) {
-            stream = info.OpenWrite();
+            writer = new BinaryWriter(info.OpenWrite());
         }
 
         public void Dispose() {
-            if(stream != null) {
-                stream.Dispose();
-                stream = null;
+            if(writer != null) {
+                writer.Dispose();
+                writer = null;
             }            
         }
 
-        long IBinaryWriter.Position => stream.Position;
+        long IBinaryWriter.Position => writer.BaseStream.Position;
         void IBinaryWriter.WriteInt32(int value) {
-            stream.Write(BitConverter.GetBytes(value), 0, 4);
+            writer.Write(value);
         }
         void IBinaryWriter.WriteBuffer(byte[] buffer) {
-            stream.Write(buffer, 0, buffer.Length);
+            writer.Write(buffer);
         }
-        void IBinaryWriter.WriteBuffer(byte[] buffer, long position) {
-            stream.Seek(position, SeekOrigin.Begin);
-            ((IBinaryWriter)this).WriteBuffer(buffer);
-        }        
+        void IBinaryWriter.Seek(long position) {
+            writer.BaseStream.Seek(position, SeekOrigin.Begin);
+        }
     }
 }
