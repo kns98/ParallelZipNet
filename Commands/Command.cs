@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace ParallelZipNet {
+namespace ParallelZipNet.Commands {
     public class Command {
         readonly string[] keys;
         readonly string[] parameters;

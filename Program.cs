@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Processor;
+using ParallelZipNet.Commands;
 
 namespace ParallelZipNet {
     class Program {
@@ -12,23 +13,22 @@ namespace ParallelZipNet {
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
-        static readonly Command helpCommand = new Command(new[] { "--help", "-h", "-?" }, _ => Help());
+        static readonly CommandProcessor commands = new CommandProcessor();
 
-        static readonly List<Command> commands = new List<Command> {
-            helpCommand,
+        static Program() {
+            commands.Register(new Command(new[] { "--help", "-h", "-?" }, _ => Help()), isDefault: true);
 
-            new Command(
+            commands.Register(new Command(
                 new[] { "compress" },
                 new[] { argSrc, argDest }, 
-                args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => Compressor.Run(reader, writer, cancellationToken))),
+                args => ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken))));
 
-            new Command(
+            commands.Register(new Command(
                 new[] { "decompress" },
                 new[] { argSrc, argDest },
                 args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken)))
-        };
+                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken))));
+        }
 
         static int Main(string[] args) {
             Console.CancelKeyPress += (s, e) => {
@@ -37,13 +37,7 @@ namespace ParallelZipNet {
             };
             
             try {
-                Command command = null;
-                if(args.Length > 0)
-                    command = commands.FirstOrDefault(x => x.IsMatch(args[0]));
-                if(command != null)
-                    command.Run(args.Skip(1).ToArray());                
-                else
-                    helpCommand.Run();
+                commands.Run(args);
 
                 Console.WriteLine();
                 if(cancellationToken.IsCancelled)
