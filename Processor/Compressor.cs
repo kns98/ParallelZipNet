@@ -8,7 +8,7 @@ using static ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
-        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken) {
+        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, bool log) {
             int chunkCount = Convert.ToInt32(reader.Length / Constants.CHUNK_SIZE) + 1;
             writer.WriteInt32(chunkCount);
 

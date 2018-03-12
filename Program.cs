@@ -16,18 +16,49 @@ namespace ParallelZipNet {
         static readonly CommandProcessor commands = new CommandProcessor();
 
         static Program() {
-            commands.Register(new Command(new[] { "--help", "-h", "-?" }, _ => Help()), isDefault: true);
+            var helpCommand = new Command(args => Help(args["A"], args["B"]));
+            helpCommand.Sections.Add(new CommandSection(new[] { "--help", "-h", "-?" }, new[] { "A", "B" } ));
 
-            commands.Register(new Command(
-                new[] { "compress" },
-                new[] { argSrc, argDest }, 
-                args => ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken))));
+            var logSection = new CommandSection(new[] { "--log" });
+            
+            var compressCommand = new Command(
+                new CommandSection(
+                    "COMPRESS",
+                    new[] { "compress" },
+                    new[] { argSrc, argDest }
+                ),
+                args => {                    
+                    ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken, args.ContainsKey("--log")));
+                })
+                .Option(logSection);
 
-            commands.Register(new Command(
-                new[] { "decompress" },
-                new[] { argSrc, argDest },
+            var decompressCommand = new Command(
+                new CommandSection(
+                    "DECOPMRESS",
+                    new[] { "decompress" },
+                    new[] { argSrc, argDest }
+                ),
                 args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken))));
+                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken)))
+                .Option(logSection);
+
+            commands.Register(helpCommand);
+            commands.Register(compressCommand);
+            commands.Register(decompressCommand);
+
+
+            //commands.Register(new Command(new[] { "--help", "-h", "-?" }, _ => Help()), isDefault: true);
+
+            // commands.Register(new Command(
+            //     new[] { "compress" },
+            //     new[] { argSrc, argDest }, 
+            //     args => ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken))));
+
+            // commands.Register(new Command(
+            //     new[] { "decompress" },
+            //     new[] { argSrc, argDest },
+            //     args => ProcessFile(args[argSrc], args[argDest],
+            //         (reader, writer) => Decompressor.Run(reader, writer, cancellationToken))));
         }
 
         static int Main(string[] args) {
@@ -54,8 +85,8 @@ namespace ParallelZipNet {
             }
         }
 
-        static void Help() {
-            Console.WriteLine("TODO : Help");
+        static void Help(string a, string b) {
+            Console.WriteLine($"TODO : Help -> A={a} B={b}");
         }
 
         static void ProcessFile(string src, string dest, Action<IBinaryReader, IBinaryWriter> processor) {
