@@ -4,61 +4,35 @@ using System.Collections.Generic;
 
 namespace ParallelZipNet.Commands {
     public class Command {
-        readonly CommandSection required;
-        readonly List<CommandSection> optional = new List<CommandSection>();
-        readonly Action<List<ParsedSection>> action;
+        readonly Action<IEnumerable<Option>> action;        
+        readonly List<Section> optionalSections = new List<Section>();
+        Section requiredSection;
 
-        public Command(Action<List<ParsedSection>> action)
-            : this(null, action) {
-        }
-        public Command(CommandSection required, Action<List<ParsedSection>> action) {
-            this.required = required;
+        public Action<IEnumerable<Option>> Action => action;
+        public Section RequiredSection => requiredSection;
+        public IEnumerable<Section> OptionalSections => optionalSections;
+
+        public Command(Action<IEnumerable<Option>> action) {
             this.action = action;
         }
 
-        public Command Option(CommandSection option) {
-            optional.Add(option);
+        public Command Required(string key) {
+            return Required(key, new[] { key }, new string[0]);
+        }
+
+        public Command Required(string name, string[] keys, string[] param) {
+            requiredSection = new Section(name, keys, param);
             return this;
         }
 
-        public Action Parse(string[] args) {
-            var result = new List<ParsedSection>();
-            int offset = 0;            
-            if(required != null) {
-                ParsedSection parsed = ParseSection(required, args, ref offset);
-
-                if(parsed == null)
-                    return null;
-                
-                result.Add(parsed);
-            }
-
-            ParsedSection optionalParsed;
-            List<CommandSection> found = new List<CommandSection>();
-            do {
-                optionalParsed = null;                
-                foreach(var option in optional.Except(found)) {
-                    optionalParsed = ParseSection(option, args, ref offset);
-                    if(optionalParsed != null) {
-                        result.Add(optionalParsed);
-                        found.Add(option);
-                        break;
-                    }
-                }
-            }
-            while(optionalParsed != null && offset < args.Length);
-
-            if(result.Count > 0)
-                return () => action(result);
-            else
-                return null;            
+        public Command Optional(string key) {
+            return Optional(key, new[] { key }, new string[0]);
         }
 
-        ParsedSection ParseSection(CommandSection section, string[] args, ref int offset) {
-            ParsedSection parsed = section.Parse(args.Skip(offset).ToArray());
-            if(parsed != null)
-                offset += parsed.Length;                
-            return parsed;
+        public Command Optional(string name, string[] keys, string[] param) {
+            var section = new Section(name, keys, param);
+            optionalSections.Add(section);
+            return this;
         }
     }
 }

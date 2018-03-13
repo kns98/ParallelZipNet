@@ -12,8 +12,9 @@
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/bin/Debug/netcoreapp2.0/ParallelZipNet.dll",
             // "args": ["--decompress", "Sandbox/video.gzx", "Sandbox/video$.MP4"],
-            "args": ["compress", "Sandbox/video.MP4", "Sandbox/video.gzx", "--log"],
-            // "args": ["--help_", "Roman", "Ageev", "--help"],
+            "args": ["compress", "Sandbox/video.MP4", "Sandbox/video.gzx"],
+            // "args": ["--help"],
+            // "args": ["xxx"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "integratedTerminal",

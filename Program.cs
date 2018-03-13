@@ -8,57 +8,47 @@ using ParallelZipNet.Commands;
 
 namespace ParallelZipNet {
     class Program {
-        const string argSrc ="@src";
-        const string argDest ="@dest";
+        const string
+            HELP = "HELP",
+            COMPRESS = "COMPRESS",
+            DECOMPRESS = "DECOMPRESS",
+            SRC = "SRC",
+            DEST = "DEST",
+            LOG = "--log";
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
         static readonly CommandProcessor commands = new CommandProcessor();
 
         static Program() {
-            var helpCommand = new Command(args => Help(args["A"], args["B"]));
-            helpCommand.Sections.Add(new CommandSection(new[] { "--help", "-h", "-?" }, new[] { "A", "B" } ));
+            commands.Register(opts => {
+                Option help = opts.FirstOrDefault(x => x.Name == HELP);
+                if(help != null)
+                    Help();
+            })                
+            .Optional(HELP, new[] { "--help", "-h", "-?" }, new string[0]);
 
-            var logSection = new CommandSection(new[] { "--log" });
-            
-            var compressCommand = new Command(
-                new CommandSection(
-                    "COMPRESS",
-                    new[] { "compress" },
-                    new[] { argSrc, argDest }
-                ),
-                args => {                    
-                    ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken, args.ContainsKey("--log")));
-                })
-                .Option(logSection);
+            commands.Register(opts => {
+                Option compress = opts.First(x => x.Name == COMPRESS);
+                string src = compress.GetStringParam(SRC);
+                string dest = compress.GetStringParam(DEST);
 
-            var decompressCommand = new Command(
-                new CommandSection(
-                    "DECOPMRESS",
-                    new[] { "decompress" },
-                    new[] { argSrc, argDest }
-                ),
-                args => ProcessFile(args[argSrc], args[argDest],
-                    (reader, writer) => Decompressor.Run(reader, writer, cancellationToken)))
-                .Option(logSection);
+                bool log = opts.Any(x => x.Name == LOG);                
 
-            commands.Register(helpCommand);
-            commands.Register(compressCommand);
-            commands.Register(decompressCommand);
+                ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, log));
+            })
+            .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
+            .Optional(LOG);
 
-
-            //commands.Register(new Command(new[] { "--help", "-h", "-?" }, _ => Help()), isDefault: true);
-
-            // commands.Register(new Command(
-            //     new[] { "compress" },
-            //     new[] { argSrc, argDest }, 
-            //     args => ProcessFile(args[argSrc], args[argDest], (reader, writer) => Compressor.Run(reader, writer, cancellationToken))));
-
-            // commands.Register(new Command(
-            //     new[] { "decompress" },
-            //     new[] { argSrc, argDest },
-            //     args => ProcessFile(args[argSrc], args[argDest],
-            //         (reader, writer) => Decompressor.Run(reader, writer, cancellationToken))));
+            commands.Register(opts => {
+                Option compress = opts.First(x => x.Name == DECOMPRESS);
+                string src = compress.GetStringParam(SRC);
+                string dest = compress.GetStringParam(DEST);
+                
+                ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken));
+            })
+            .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
+            .Optional(LOG);
         }
 
         static int Main(string[] args) {
@@ -68,7 +58,8 @@ namespace ParallelZipNet {
             };
             
             try {
-                commands.Run(args);
+                Action action = commands.Parse(args);
+                action();
 
                 Console.WriteLine();
                 if(cancellationToken.IsCancelled)
@@ -85,8 +76,8 @@ namespace ParallelZipNet {
             }
         }
 
-        static void Help(string a, string b) {
-            Console.WriteLine($"TODO : Help -> A={a} B={b}");
+        static void Help() {
+            Console.WriteLine($"TODO : Help");
         }
 
         static void ProcessFile(string src, string dest, Action<IBinaryReader, IBinaryWriter> processor) {

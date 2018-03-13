@@ -4,34 +4,62 @@ using System.Linq;
 
 namespace ParallelZipNet.Commands {
     public class CommandProcessor {
-        readonly List<Command> commands = new List<Command>();
+        static Action ParseCommand(Command command, string[] args) {
+            var options = new List<Option>();
+            int offset = 0;            
 
-        Command defaultCommand;
-
-        public void Register(Command command, bool isDefault = false) {
-            commands.Add(command);
-            if(isDefault)
-                defaultCommand = command;
-        }
-
-        public void Run(params string[] args) {
-            foreach(var command in commands) {
-                Action action = command.Parse(args);
-                if(action != null) {
-                    action();
-                    return;
-                }
+            Option required = null;
+            if(command.RequiredSection != null) {
+                required = ParseSection(command.RequiredSection, args, ref offset);
+                if(required != null)
+                    options.Add(required);
+                else
+                    return null;
             }
 
-            throw new Exception("Unknown command");
+            Option optional;
+            List<Section> matched = new List<Section>();
+            do {
+                optional = null;                
+                foreach(var section in command.OptionalSections.Except(matched)) {
+                    optional = ParseSection(section, args, ref offset);
+                    if(optional != null) {
+                        options.Add(optional);
+                        matched.Add(section);
+                        break;
+                    }
+                }
+            }
+            while(optional != null && offset < args.Length);
+            
+            if(options.Count > 0)
+                return () => command.Action(options);
+            else
+                return null;            
+        }
 
-            // Command command = null;
-            // if(args.Length > 0)
-            //     command = commands.FirstOrDefault(x => x.IsMatch(args[0]));
-            // if(command != null)
-            //     command.Run(args.Skip(1).ToArray());                
-            // else if(defaultCommand != null)
-            //     defaultCommand.Run();                
+        static Option ParseSection(Section section, string[] args, ref int offset) {        
+            Option option = section.Parse(args.Skip(offset).ToArray());
+            if(option != null)
+                offset += section.Length;                
+            return option;
+        }
+
+        readonly List<Command> commands = new List<Command>();
+
+        public Command Register(Action<IEnumerable<Option>> action) {
+            var command = new Command(action);
+            commands.Add(command);
+            return command;
+        }
+
+        public Action Parse(params string[] args) {
+            foreach(var command in commands) {                
+                Action action = ParseCommand(command, args);
+                if(action != null)
+                    return action;
+            }
+            throw new Exception("Unknown Command. Use --help for more information.");
         }
     }
 }

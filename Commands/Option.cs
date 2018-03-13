@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 
 namespace ParallelZipNet.Commands {
-    public class ParsedSection {
+    public class Option {
         readonly string name;
         readonly Dictionary<string, string> parameters = new Dictionary<string, string>();
 
         public string Name => name;
-        public int Length => parameters.Count + 1;
 
-        public ParsedSection(string name) {
+        public Option(string name) {
             if(name == null)
                 throw new ArgumentNullException(nameof(name));
                 
@@ -20,11 +19,11 @@ namespace ParallelZipNet.Commands {
             parameters.Add(key, value);
         }
 
-        public string GetStringParameter<T>(string key) {
+        public string GetStringParam(string key) {
             return parameters[key];
         }
 
-        public int GetIntegerParameter(string key) {
+        public int GetIntegerParam(string key) {
             return int.Parse(parameters[key]);
         }
     }
