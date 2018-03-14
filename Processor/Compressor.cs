@@ -4,11 +4,15 @@ using System.IO;
 using System.IO.Compression;
 using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Threading;
+using ParallelZipNet.Utils;
 using static ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
         public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, bool log) {
+            Guard.NotNull(reader, nameof(reader));
+            Guard.NotNull(writer, nameof(writer));
+
             int chunkCount = Convert.ToInt32(reader.Length / Constants.CHUNK_SIZE) + 1;
             writer.WriteInt32(chunkCount);
 

@@ -4,11 +4,15 @@ using System.IO;
 using System.IO.Compression;
 using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Threading;
+using ParallelZipNet.Utils;
 using static ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
         public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken) {
+            Guard.NotNull(reader, nameof(reader));
+            Guard.NotNull(writer, nameof(writer));
+
             int chunkCount = reader.ReadInt32();
             if(chunkCount <= 0)
                 throw new InvalidDataException("FileCorruptedMessage_3");                

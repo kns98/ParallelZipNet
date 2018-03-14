@@ -21,34 +21,16 @@ namespace ParallelZipNet {
         static readonly CommandProcessor commands = new CommandProcessor();
 
         static Program() {
-            commands.Register(opts => {
-                Option help = opts.FirstOrDefault(x => x.Name == HELP);
-                if(help != null)
-                    Help();
-            })                
-            .Optional(HELP, new[] { "--help", "-h", "-?" }, new string[0]);
+            commands.Register(Default)                
+                .Optional(HELP, new[] { "--help", "-h", "-?" }, new string[0]);
 
-            commands.Register(opts => {
-                Option compress = opts.First(x => x.Name == COMPRESS);
-                string src = compress.GetStringParam(SRC);
-                string dest = compress.GetStringParam(DEST);
+            commands.Register(Compress)
+                .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
+                .Optional(LOG);
 
-                bool log = opts.Any(x => x.Name == LOG);                
-
-                ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, log));
-            })
-            .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
-            .Optional(LOG);
-
-            commands.Register(opts => {
-                Option compress = opts.First(x => x.Name == DECOMPRESS);
-                string src = compress.GetStringParam(SRC);
-                string dest = compress.GetStringParam(DEST);
-                
-                ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken));
-            })
-            .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
-            .Optional(LOG);
+            commands.Register(Decompress)
+                .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
+                .Optional(LOG);
         }
 
         static int Main(string[] args) {
@@ -58,8 +40,7 @@ namespace ParallelZipNet {
             };
             
             try {
-                Action action = commands.Parse(args);
-                action();
+                commands.Parse(args)();
 
                 Console.WriteLine();
                 if(cancellationToken.IsCancelled)
@@ -69,11 +50,40 @@ namespace ParallelZipNet {
 
                 return 0;
             }
+            catch(UnknownCommandException) {
+                Console.WriteLine();
+                Console.WriteLine("Unknown Command. Use --help for more information.");
+                return 1;
+            }
             catch(Exception e) {
                 Console.WriteLine();
                 Console.WriteLine(e.Message);
                 return 1;
             }
+        }
+
+        static void Default(IEnumerable<Option> options) {
+            Option help = options.FirstOrDefault(x => x.Name == HELP);
+            if(help != null)
+                Help();            
+        }
+
+        static void Compress(IEnumerable<Option> options) {
+            Option compress = options.First(x => x.Name == COMPRESS);
+            string src = compress.GetStringParam(SRC);
+            string dest = compress.GetStringParam(DEST);
+
+            bool log = options.Any(x => x.Name == LOG);                
+
+            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, log));
+        }
+
+        static void Decompress(IEnumerable<Option> options) {
+            Option decompress = options.First(x => x.Name == DECOMPRESS);
+            string src = decompress.GetStringParam(SRC);
+            string dest = decompress.GetStringParam(DEST);
+            
+            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken));
         }
 
         static void Help() {

@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
         public class LockContext<T> where T : class {
         readonly IEnumerator<T> enumerator;
 
         public LockContext(IEnumerable<T> enumeration) {
+            Guard.NotNull(enumeration, nameof(enumeration));
+            
             enumerator = enumeration.GetEnumerator();
         }
 

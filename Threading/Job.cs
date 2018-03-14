@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
     public class Job<T> : IDisposable where T : class {
@@ -20,6 +21,10 @@ namespace ParallelZipNet.Threading {
         }        
 
         public Job(string name, IEnumerable<T> enumeration, CancellationToken cancellationToken) {
+            Guard.NotNull(name, nameof(name));
+            Guard.NotNull(enumeration, nameof(enumeration));
+            Guard.NotNull(cancellationToken, nameof(cancellationToken));
+
             this.enumeration = enumeration;
             this.cancellationToken = cancellationToken;
             thread = new Thread(Run) {

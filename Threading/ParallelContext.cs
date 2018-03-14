@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
     public static class ParallelContextBuilder {
@@ -15,15 +16,22 @@ namespace ParallelZipNet.Threading {
         readonly int jobNumber;        
 
         public ParallelContext(IEnumerable<T> enumeration, int jobNumber) {
+            Guard.NotNull(enumeration, nameof(enumeration));
+            Guard.NotZeroOrNegative(jobNumber, nameof(jobNumber));
+            
             this.enumeration = enumeration;
             this.jobNumber = jobNumber;
         }
 
         public ParallelContext<U> Map<U>(Func<T, U> transform) where U : class {
+            Guard.NotNull(transform, nameof(transform));
+
             return new ParallelContext<U>(enumeration.Select(transform), jobNumber);
         }
 
         public ParallelContext<T> Do(Action<T> action) {
+            Guard.NotNull(action, nameof(action));
+
             return Map<T>(t => { action(t); return t; });
         }
 

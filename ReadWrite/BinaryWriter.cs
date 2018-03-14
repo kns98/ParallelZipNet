@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.ReadWrite {
     public interface IBinaryWriter {
@@ -13,6 +14,8 @@ namespace ParallelZipNet.ReadWrite {
         BinaryWriter writer;
 
         public BinaryFileWriter(FileInfo info) {
+            Guard.NotNull(info, nameof(info));
+            
             writer = new BinaryWriter(info.OpenWrite());
         }
 
@@ -28,9 +31,13 @@ namespace ParallelZipNet.ReadWrite {
             writer.Write(value);
         }
         void IBinaryWriter.WriteBuffer(byte[] buffer) {
+            Guard.NotNull(buffer, nameof(buffer));
+
             writer.Write(buffer);
         }
         void IBinaryWriter.Seek(long position) {
+            Guard.NotNegative(position, nameof(position));
+
             writer.BaseStream.Seek(position, SeekOrigin.Begin);
         }
     }
