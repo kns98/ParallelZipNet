@@ -52,15 +52,15 @@ namespace ParallelZipNet.Commands {
             }
 
             Option optional;
-            List<Section> matched = new List<Section>();
+            List<Section> parsedSections = new List<Section>();
             do {
                 optional = null;                
-                foreach(var optionalSection in optionalSections.Except(matched)) {
-                    string[] sectionArgs = args.Skip(offset).ToArray();
+                string[] sectionArgs = args.Skip(offset).ToArray();
+                foreach(var optionalSection in optionalSections.Except(parsedSections)) {
                     if(optionalSection.TryParse(sectionArgs, out optional)) {
                         options.Add(optional);
                         offset += optionalSection.Length;
-                        matched.Add(optionalSection);
+                        parsedSections.Add(optionalSection);
                         break;
                     }
                 }
