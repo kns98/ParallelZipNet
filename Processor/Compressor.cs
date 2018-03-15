@@ -9,9 +9,12 @@ using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
-        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, Loggers loggers = null) {
+        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
+        Loggers loggers = null) {
+
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
+            Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
 
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
@@ -21,11 +24,9 @@ namespace ParallelZipNet.Processor {
 
             int chunkCount = Convert.ToInt32(reader.Length / Constants.CHUNK_SIZE) + 1;
             writer.WriteInt32(chunkCount);
-
-            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
             
             var chunks = ReadSource(reader) 
-                .AsParallel(jobNumber)
+                .AsParallel(jobCount)
                 .Do(x => chunkLogger?.LogChunk("Read", x))
                 .Map(ZipChunk)
                 .Do(x => chunkLogger?.LogChunk("Proc", x))                

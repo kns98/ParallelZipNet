@@ -28,10 +28,18 @@ namespace ParallelZipNet.Commands {
             return parameters[key];
         }
 
-        public int GetIntegerParam(string key) {
+        public int GetIntegerParam(string key, int minConstraint = int.MinValue, int maxContstaint = int.MaxValue) {
             Guard.NotNullOrWhiteSpace(key, nameof(key));
+            Guard.NotMinGreaterThanMax(minConstraint, maxContstaint, $"[{nameof(minConstraint)}, {nameof(maxContstaint)}]");
             
-            return int.Parse(parameters[key]);
+            int param = int.Parse(parameters[key]);
+            
+            if(param < minConstraint)
+                return minConstraint;
+            else if(param > maxContstaint)            
+                return maxContstaint;
+            else
+                return param;
         }
     }
 }

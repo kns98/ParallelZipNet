@@ -16,7 +16,12 @@ namespace ParallelZipNet {
             SRC = "SRC",
             DEST = "DEST",
             LOG_CHUNKS = "--log-chunks",
-            LOG_JOBS = "--log-jobs";
+            LOG_JOBS = "--log-jobs",
+            JOBCOUNT = "JOBCOUNT",
+            JOBCOUNT_KEY = "--job-count",
+            JOBCOUNT_VALUE = "JOBCOUNT_VALUE";
+
+        const int maxJobCount = 20;
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
@@ -28,11 +33,13 @@ namespace ParallelZipNet {
 
             commands.Register(Compress)
                 .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
+                .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
 
             commands.Register(Decompress)
                 .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
+                .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
         }
@@ -77,7 +84,7 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, GetLoggers(options)));
+            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, GetJobCount(options), GetLoggers(options)));
         }
 
         static void Decompress(IEnumerable<Option> options) {
@@ -85,7 +92,19 @@ namespace ParallelZipNet {
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
             
-            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken, GetLoggers(options)));
+            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken, GetJobCount(options), GetLoggers(options)));
+        }
+
+        static int GetJobCount(IEnumerable<Option> options) {
+            Option jobs = options.FirstOrDefault(x => x.Name == JOBCOUNT);            
+            if(jobs != null) {                        
+                try {
+                    return jobs.GetIntegerParam(JOBCOUNT_VALUE, 1, maxJobCount);
+                }
+                catch {                    
+                }
+            }
+            return Math.Max(Environment.ProcessorCount - 1, 1);
         }
 
         static Loggers GetLoggers(IEnumerable<Option> options) {

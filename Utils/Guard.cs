@@ -32,5 +32,10 @@ namespace ParallelZipNet.Utils {
             if(argument <= 0)
                 throw new ArgumentException($"Number {name} must be not zero or negative", name);
         }
+
+        public static void NotMinGreaterThanMax(int min, int max, string name) {
+            if(min > max)
+                throw new ArgumentException($"Number {min} must be less than number {max}", name);
+        }
     }
 }

@@ -9,9 +9,12 @@ using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
-        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, Loggers loggers = null) {
+        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
+            Loggers loggers = null) {
+
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
+            Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
 
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
@@ -21,12 +24,10 @@ namespace ParallelZipNet.Processor {
 
             int chunkCount = reader.ReadInt32();
             if(chunkCount <= 0)
-                throw new InvalidDataException("FileCorruptedMessage_3");                
-
-            int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
+                throw new InvalidDataException("FileCorruptedMessage_3");
 
             var chunks = ReadSource(reader, chunkCount)
-                .AsParallel(jobNumber)                
+                .AsParallel(jobCount)                
                 .Do(x => chunkLogger?.LogChunk("Read", x))
                 .Map(UnzipChunk)
                 .Do(x => chunkLogger?.LogChunk("Proc", x))
