@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
@@ -35,12 +36,12 @@ namespace ParallelZipNet.Threading {
             return Map<T>(t => { action(t); return t; });
         }
 
-        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, Action<Exception> errorHandler = null) {
+        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, Action<Exception> errorHandler = null, IJobLogger logger = null) {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
 
             Job<T>[] jobs = Enumerable.Range(1, jobNumber)
-                .Select(i => new Job<T>($"thread {i}", enumeration, cancellationToken))
+                .Select(i => new Job<T>($"{i}", enumeration, cancellationToken))
                 .ToArray();
 
             while(true) {
@@ -59,9 +60,13 @@ namespace ParallelZipNet.Threading {
                     break;
                 }                   
                 
+                if(logger != null)
+                    logger.LogResultsCount(jobs.Select(job => job.ResultsCount).Sum());
+                
                 IEnumerable<T> results = jobs
                     .Select(job => job.GetResult())
-                    .Where(r => r != null);
+                    .Where(r => r != null)
+                    .ToArray();
 
                 foreach(T result in results)
                     yield return result;
@@ -69,7 +74,7 @@ namespace ParallelZipNet.Threading {
                 if(jobs.All(job => job.IsFinished))
                     break;
                 else
-                    Thread.Yield();                    
+                    Thread.Sleep(5);                    
             }
 
             foreach(var job in jobs)

@@ -5,13 +5,19 @@ using System.IO.Compression;
 using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
-using static ParallelZipNet.Logger;
+using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
-        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken) {
+        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, Loggers loggers = null) {
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
+
+            IDefaultLogger defaultLogger = loggers?.DefaultLogger;
+            IChunkLogger chunkLogger = loggers?.ChunkLogger;
+            IJobLogger jobLogger = loggers?.JobLogger;
+
+            Exception error = null;
 
             int chunkCount = reader.ReadInt32();
             if(chunkCount <= 0)
@@ -20,18 +26,24 @@ namespace ParallelZipNet.Processor {
             int jobNumber = Math.Max(Environment.ProcessorCount - 1, 1);            
 
             var chunks = ReadSource(reader, chunkCount)
-                .AsParallel(jobNumber)
-                .Do(x => Log("Read", x))
+                .AsParallel(jobNumber)                
+                .Do(x => chunkLogger?.LogChunk("Read", x))
                 .Map(UnzipChunk)
-                .Do(x => Log("Decomp", x))
-                .AsEnumerable(cancellationToken, err => Log($"Error Happened: {err.Message}", null));
+                .Do(x => chunkLogger?.LogChunk("Proc", x))
+                .AsEnumerable(cancellationToken, x => error = x, jobLogger);
 
+            int index = 0;
             foreach(var chunk in chunks) {
                 long position = (long)chunk.Index * Constants.CHUNK_SIZE;
                 writer.Seek(position);
-                writer.WriteBuffer(chunk.Data);  
-                Log("Written", chunk);              
+                writer.WriteBuffer(chunk.Data);
+
+                chunkLogger?.LogChunk("Write", chunk);
+                defaultLogger?.LogChunksProcessed(++index, chunkCount);
             }
+
+            if(error != null)
+                throw error;
         }
 
         static IEnumerable<Chunk> ReadSource(IBinaryReader reader, int chunkCount) {

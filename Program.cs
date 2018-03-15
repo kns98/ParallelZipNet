@@ -5,6 +5,7 @@ using System.IO;
 using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Commands;
+using ParallelZipNet.Logger;
 
 namespace ParallelZipNet {
     class Program {
@@ -14,7 +15,8 @@ namespace ParallelZipNet {
             DECOMPRESS = "DECOMPRESS",
             SRC = "SRC",
             DEST = "DEST",
-            LOG = "--log";
+            LOG_CHUNKS = "--log-chunks",
+            LOG_JOBS = "--log-jobs";
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
@@ -26,11 +28,13 @@ namespace ParallelZipNet {
 
             commands.Register(Compress)
                 .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
-                .Optional(LOG);
+                .Optional(LOG_CHUNKS)
+                .Optional(LOG_JOBS);
 
             commands.Register(Decompress)
                 .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
-                .Optional(LOG);
+                .Optional(LOG_CHUNKS)
+                .Optional(LOG_JOBS);
         }
 
         static int Main(string[] args) {
@@ -73,9 +77,7 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            bool log = options.Any(x => x.Name == LOG);                
-
-            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, log));
+            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, GetLoggers(options)));
         }
 
         static void Decompress(IEnumerable<Option> options) {
@@ -83,7 +85,18 @@ namespace ParallelZipNet {
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
             
-            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken));
+            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken, GetLoggers(options)));
+        }
+
+        static Loggers GetLoggers(IEnumerable<Option> options) {
+            var loggers = new Loggers();            
+            if(options.Any(x => x.Name == LOG_CHUNKS))
+                loggers.ChunkLogger = new ChunkLogger();
+            else if(options.Any(x => x.Name == LOG_JOBS))
+                loggers.JobLogger = new JobLogger();
+            else
+                loggers.DefaultLogger = new DefaultLogger();            
+            return loggers;
         }
 
         static void Help() {
