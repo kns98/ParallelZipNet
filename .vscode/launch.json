@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp2.0/ParallelZipNet.dll",
+            "program": "${workspaceFolder}/ParallelZipNet/bin/Debug/netcoreapp2.0/ParallelZipNet.dll",
             // "args": ["--decompress", "Sandbox/video.gzx", "Sandbox/video$.MP4"],
-            "args": ["compress", "Sandbox/video.MP4", "Sandbox/video.gzx"],
+            "args": ["compress", "./ParallelZipNet/Sandbox/video.MP4", "./ParallelZipNet/Sandbox/video.gzx"],
             // "args": ["--help"],
             // "args": ["xxx"],
             "cwd": "${workspaceFolder}",

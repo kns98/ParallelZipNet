@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/ParallelZipNet.csproj"
+                "${workspaceFolder}/ParallelZipNet.sln"
             ],
             "problemMatcher": "$msCompile",
             "group": {
