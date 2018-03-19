@@ -38,7 +38,7 @@ namespace ParallelZipNet.Threading {
             this.cancellationToken = cancellationToken;
             thread = new Thread(Run) {
                 Name = name,
-                IsBackground = false
+                IsBackground = true
             };            
             thread.Start();            
         }
