@@ -44,21 +44,23 @@ namespace ParallelZipNet.Threading {
                 .Select(i => new Job<T>($"{i}", enumeration, cancellationToken))
                 .ToArray();
 
+            bool HandleFailure() {
+                var failedJobs = jobs
+                    .Where(job => job.Error != null)
+                    .ToList();
+                if(errorHandler != null)
+                    failedJobs.ForEach(job => errorHandler(job.Error));
+                return failedJobs.Count > 0;
+            }                
+
             while(true) {
                 if(cancellationToken.IsCancelled)
                     break;
 
-                var failedJobs = jobs
-                    .Where(job => job.Error != null)
-                    .ToArray();
-
-                if(failedJobs.Length > 0) {
-                    cancellationToken.Cancel();
-                    if(errorHandler != null)
-                        foreach(var job in failedJobs)
-                            errorHandler(job.Error);                    
+                if(HandleFailure()) {
+                    cancellationToken.Cancel();                    
                     break;
-                }                   
+                }
                 
                 if(logger != null)
                     logger.LogResultsCount(jobs.Select(job => job.ResultsCount).Sum());
@@ -71,8 +73,10 @@ namespace ParallelZipNet.Threading {
                 foreach(T result in results)
                     yield return result;
 
-                if(jobs.All(job => job.IsFinished))
+                if(jobs.All(job => job.IsFinished)) {
+                    HandleFailure();
                     break;
+                }
                 else
                     Thread.Sleep(5);                    
             }
