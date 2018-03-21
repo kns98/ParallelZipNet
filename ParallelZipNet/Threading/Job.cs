@@ -4,7 +4,7 @@ using System.Threading;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
-    public class Job<T> : IDisposable where T : class {
+    public class Job<T> : IDisposable {
         const int timeout = 10;
 
         readonly Queue<T> results = new Queue<T>();        
@@ -43,13 +43,17 @@ namespace ParallelZipNet.Threading {
             thread.Start();            
         }
 
-        public T GetResult() {
-            T result = null;
+        public bool TryGetResult(out T result) {
+            bool success = false;
+            T next = default(T);
             SafeWrite(() => {
-                if(results.Count > 0)
-                    result = results.Dequeue();
+                if(results.Count > 0) {
+                    success = true;
+                    next = results.Dequeue();
+                }
             });
-            return result;
+            result = next;
+            return success;
         }             
 
         public void Dispose() {

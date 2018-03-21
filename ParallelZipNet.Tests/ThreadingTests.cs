@@ -10,26 +10,32 @@ using System.Threading.Tasks;
 
 namespace ParallelZipNet.Tests {
     public class ThreadingTests {
-        [Fact]
-        public async Task LockContext_Test() {
-            var trace = new Queue<string>();
+        const int timeout = 10000;
+
+        [Theory]
+        [InlineData(100)]
+        public async Task LockContext_Test(int sequenceLength) {
+            const int jobCount = 10;
+            const int sleepTime = 10;
+
+            var trace = new List<string>();
 
             Exception exception = null;
 
             Task task = Task.Run(() => {
-                new[] { "A", "B", "C" }
-                    .Select(x => {                        
-                        trace.Enqueue($"Enter {Thread.CurrentThread.Name}");
-                        Thread.Sleep(50);
-                        trace.Enqueue($"Leave {Thread.CurrentThread.Name}");
+                Enumerable.Range(1, sequenceLength)
+                    .Select(x => {    
+                        trace.Add("Enter");
+                        Thread.Sleep(sleepTime);
+                        trace.Add("Leave");
                         return x;
                     })
-                    .AsParallel(2)
+                    .AsParallel(jobCount)
                     .AsEnumerable(null, ex => exception = ex)
                     .ToList()
                     .ForEach(_ => {});
                 })
-                .WithTimeout(1000);
+                .WithTimeout(timeout);
 
             await task;
 
@@ -37,7 +43,13 @@ namespace ParallelZipNet.Tests {
                 throw task.Exception;
 
             if(exception != null)
-                throw exception;            
+                throw exception;
+
+            trace.Should().HaveCount(sequenceLength * 2);
+            for(int i = 0; i < trace.Count; i += 2) {
+                trace[i].Should().Be("Enter");
+                trace[i + 1].Should().Be("Leave");
+            }
         }
     }
 }

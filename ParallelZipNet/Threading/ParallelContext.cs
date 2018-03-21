@@ -7,27 +7,27 @@ using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
     public static class ParallelContextBuilder {
-        public static ParallelContext<T> AsParallel<T>(this IEnumerable<T> enumeration, int jobNumber) where T : class {
-            return new ParallelContext<T>(new LockContext<T>(enumeration).AsEnumerable(), jobNumber);
+        public static ParallelContext<T> AsParallel<T>(this IEnumerable<T> enumeration, int jobCount) {
+            return new ParallelContext<T>(new LockContext<T>(enumeration).AsEnumerable(), jobCount);
         }
     }
 
-     public class ParallelContext<T> where T : class  {        
+     public class ParallelContext<T> {        
         readonly IEnumerable<T> enumeration;
-        readonly int jobNumber;        
+        readonly int jobCount;        
 
-        public ParallelContext(IEnumerable<T> enumeration, int jobNumber) {
+        public ParallelContext(IEnumerable<T> enumeration, int jobCount) {
             Guard.NotNull(enumeration, nameof(enumeration));
-            Guard.NotZeroOrNegative(jobNumber, nameof(jobNumber));
+            Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
             
             this.enumeration = enumeration;
-            this.jobNumber = jobNumber;
+            this.jobCount = jobCount;
         }
 
-        public ParallelContext<U> Map<U>(Func<T, U> transform) where U : class {
+        public ParallelContext<U> Map<U>(Func<T, U> transform) {
             Guard.NotNull(transform, nameof(transform));
 
-            return new ParallelContext<U>(enumeration.Select(transform), jobNumber);
+            return new ParallelContext<U>(enumeration.Select(transform), jobCount);
         }
 
         public ParallelContext<T> Do(Action<T> action) {
@@ -40,7 +40,7 @@ namespace ParallelZipNet.Threading {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
 
-            Job<T>[] jobs = Enumerable.Range(1, jobNumber)
+            Job<T>[] jobs = Enumerable.Range(1, jobCount)
                 .Select(i => new Job<T>($"{i}", enumeration, cancellationToken))
                 .ToArray();
 
@@ -63,10 +63,10 @@ namespace ParallelZipNet.Threading {
                 if(logger != null)
                     logger.LogResultsCount(jobs.Select(job => job.ResultsCount).Sum());
                 
-                IEnumerable<T> results = jobs
-                    .Select(job => job.GetResult())
-                    .Where(r => r != null)
-                    .ToArray();
+                List<T> results = new List<T>(jobs.Length);
+                foreach(var job in jobs)
+                    if(job.TryGetResult(out T result))
+                        results.Add(result);                
 
                 foreach(T result in results)
                     yield return result;

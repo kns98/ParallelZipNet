@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Threading {
-        public class LockContext<T> where T : class {
+        public class LockContext<T> {
         readonly IEnumerator<T> enumerator;
 
         public LockContext(IEnumerable<T> enumeration) {
@@ -12,12 +12,15 @@ namespace ParallelZipNet.Threading {
         }
 
         public IEnumerable<T> AsEnumerable() {
-            T result;
             while(true) {
+                T result = default(T);
+                bool success = false;                
                 lock(enumerator) {
-                    result = enumerator.MoveNext() ? enumerator.Current : null;
+                    success = enumerator.MoveNext();
+                    if(success)
+                        result = enumerator.Current;
                 }                
-                if(result != null)
+                if(success)
                     yield return result;                    
                 else 
                     yield break;                    
