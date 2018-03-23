@@ -93,7 +93,7 @@ namespace ParallelZipNet.Tests {
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(10)]
-        public async Task Cancellation_Test(int jobCount) {
+        public void Cancellation_Test(int jobCount) {
             int sequenceLength = jobCount * 10;
             int cancelTreshold = jobCount * 2;
             int resultTreshold = jobCount * 3;
@@ -108,28 +108,20 @@ namespace ParallelZipNet.Tests {
                     .AsParallel(jobCount)
                     .AsEnumerable(cancellationToken);
                 
-                foreach(int value in values) {
+                foreach(int value in values) {                    
                     results.Add(value);
                     if(results.Count == cancelTreshold)
                         cancellationEvent.Set();
-                }                
-            })
-            .WithTimeout(timeout);
-
-            Task cancellationTask = Task.Run(() => {
-                cancellationEvent.WaitOne();
-                cancellationToken.Cancel();
+                }
             });
-
-            await Task.WhenAll(task, cancellationTask);
-
-            if(task.Exception != null)
-                throw task.Exception;
             
-            if(cancellationTask.Exception != null)
-                throw cancellationTask.Exception;
+            cancellationEvent.WaitOne();
+            cancellationToken.Cancel();
 
-            results.Should().HaveCountLessOrEqualTo(jobCount * resultTreshold);
+            task.Wait(timeout)
+                .Should().BeTrue("Timeout");
+
+            results.Should().HaveCountLessOrEqualTo(resultTreshold);
         }
 
         [Fact]    
