@@ -12,9 +12,12 @@ namespace ParallelZipNet.Tests {
     public class ThreadingTests {
         const int timeout = 5000;
 
-        [Fact]
-        public async Task LockContext_Test() {
-            const int sequenceLength = 100;
+        [Theory]
+        [InlineData(2)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public async Task LockContext_Test(int jobCount) {
+            int sequenceLength = jobCount * 10;
 
             var trace = new List<string>();
 
@@ -27,7 +30,7 @@ namespace ParallelZipNet.Tests {
                         trace.Add("Leave");
                         return x;
                     })
-                    .AsParallel(5)
+                    .AsParallel(jobCount)
                     .AsEnumerable()
                     .ToList();
                 })
@@ -45,9 +48,12 @@ namespace ParallelZipNet.Tests {
             }
         }
 
-        [Fact]
-        public async Task NormalProcessing_Test() {
-            const int sequenceLength = 100;
+        [Theory]
+        [InlineData(2)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public async Task NormalProcessing_Test(int jobCount) {
+            int sequenceLength = jobCount * 10;
 
             List<int> temp = new List<int>(sequenceLength);
             List<string> results = null;
@@ -58,7 +64,7 @@ namespace ParallelZipNet.Tests {
             Task task = Task.Run(() => {
                 results = Enumerable
                     .Range(1, sequenceLength)
-                    .AsParallel(5)
+                    .AsParallel(jobCount)
                     .Map(transform1)
                     .Do(x => {                        
                         lock(temp) {
@@ -85,37 +91,13 @@ namespace ParallelZipNet.Tests {
                 .Select(transform1)
                 .Select(transform2));
         }
-
-        [Fact]
-        public async Task ErrorHandling_Test() {
-            List<Exception> errors = new List<Exception>();
-
-            Task task = Task.Run(() => {
-                Enumerable
-                    .Range(1, 10)                    
-                    .AsParallel(5)
-                    .Do(_ => throw new InvalidOperationException())
-                    .AsEnumerable(null, err => errors.Add(err))
-                    .ToList();
-            })
-            .WithTimeout(timeout);
-
-            await task;
-
-            if(task.Exception != null)
-                throw task.Exception;
-
-            errors.Should().NotBeEmpty()
-                .And.ContainItemsAssignableTo<InvalidOperationException>();
-        }
-
         
         [Theory]
-        [InlineData(1)]
+        [InlineData(2)]
         [InlineData(5)]
         [InlineData(10)]
         public async Task Cancellation_Test(int jobCount) {
-            int rangeSize = jobCount * 10;
+            int sequenceLength = jobCount * 10;
             int cancelTreshold = jobCount * 2;
             int resultTreshold = jobCount * 3;
 
@@ -126,7 +108,7 @@ namespace ParallelZipNet.Tests {
 
             Task task = Task.Run(() => {
                  IEnumerable<int> values = Enumerable
-                    .Range(1, rangeSize)
+                    .Range(1, sequenceLength)
                     .AsParallel(jobCount)
                     .AsEnumerable(cancellationToken);
                 
@@ -152,6 +134,29 @@ namespace ParallelZipNet.Tests {
                 throw cancellationTask.Exception;
 
             results.Should().HaveCountLessOrEqualTo(jobCount * resultTreshold);
+        }
+
+        [Fact]
+        public async Task ErrorHandling_Test() {
+            List<Exception> errors = new List<Exception>();
+
+            Task task = Task.Run(() => {
+                Enumerable
+                    .Range(1, 10)                    
+                    .AsParallel(5)
+                    .Do(_ => throw new InvalidOperationException())
+                    .AsEnumerable(null, err => errors.Add(err))
+                    .ToList();
+            })
+            .WithTimeout(timeout);
+
+            await task;
+
+            if(task.Exception != null)
+                throw task.Exception;
+
+            errors.Should().NotBeEmpty()
+                .And.ContainItemsAssignableTo<InvalidOperationException>();
         }
     }
 }
