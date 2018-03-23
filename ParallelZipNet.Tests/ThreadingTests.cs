@@ -50,13 +50,13 @@ namespace ParallelZipNet.Tests {
             const int sequenceLength = 100;
 
             List<int> temp = new List<int>(sequenceLength);
-            List<string> result = null;
+            List<string> results = null;
 
             Func<int, int> transform1 = x => x * 10;
             Func<int, string> transform2 = x => $"Value : {x}";
 
             Task task = Task.Run(() => {
-                result = Enumerable
+                results = Enumerable
                     .Range(1, sequenceLength)
                     .AsParallel(5)
                     .Map(transform1)
@@ -80,7 +80,7 @@ namespace ParallelZipNet.Tests {
                 .Range(1, sequenceLength)
                 .Select(transform1));
             
-            result.Should().BeEquivalentTo(Enumerable
+            results.Should().BeEquivalentTo(Enumerable
                 .Range(1, sequenceLength)
                 .Select(transform1)
                 .Select(transform2));
@@ -107,6 +107,51 @@ namespace ParallelZipNet.Tests {
 
             errors.Should().NotBeEmpty()
                 .And.ContainItemsAssignableTo<InvalidOperationException>();
+        }
+
+        
+        [Theory]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public async Task Cancellation_Test(int jobCount) {
+            int rangeSize = jobCount * 10;
+            int cancelTreshold = jobCount * 2;
+            int resultTreshold = jobCount * 3;
+
+            var cancellationEvent = new AutoResetEvent(false);
+            var cancellationToken = new Threading.CancellationToken();
+
+            List<int> results = new List<int>();
+
+            Task task = Task.Run(() => {
+                 IEnumerable<int> values = Enumerable
+                    .Range(1, rangeSize)
+                    .AsParallel(jobCount)
+                    .AsEnumerable(cancellationToken);
+                
+                foreach(int value in values) {
+                    results.Add(value);
+                    if(results.Count == cancelTreshold)
+                        cancellationEvent.Set();
+                }                
+            })
+            .WithTimeout(timeout);
+
+            Task cancellationTask = Task.Run(() => {
+                cancellationEvent.WaitOne();
+                cancellationToken.Cancel();
+            });
+
+            await Task.WhenAll(task, cancellationTask);
+
+            if(task.Exception != null)
+                throw task.Exception;
+            
+            if(cancellationTask.Exception != null)
+                throw cancellationTask.Exception;
+
+            results.Should().HaveCountLessOrEqualTo(jobCount * resultTreshold);
         }
     }
 }
