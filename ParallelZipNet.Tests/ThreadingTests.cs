@@ -14,18 +14,22 @@ namespace ParallelZipNet.Tests {
     public class ThreadingTests {
         const int timeout = 5000;
 
+        static IEnumerable<int> Sequence(int count, int interval = 0) {
+            return Enumerable.Range(1, count)
+                .Select(x => { Thread.Sleep(interval); return x; });
+        }
+
         [Theory]
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(10)]
-        public async Task LockContext_Test(int jobCount) {
+        public void LockContext_Test(int jobCount) {
             int sequenceLength = jobCount * 10;
 
             var trace = new List<string>();
 
-            Task task = Task.Run(() => {
-                Enumerable
-                    .Range(1, sequenceLength)
+            Task.Run(() => {
+                Sequence(sequenceLength)
                     .Select(x => {    
                         trace.Add("Enter");
                         Thread.Sleep(10);
@@ -35,13 +39,9 @@ namespace ParallelZipNet.Tests {
                     .AsParallel(jobCount)
                     .AsEnumerable()
                     .ToList();
-                })
-                .WithTimeout(timeout);
-
-            await task;
-
-            if(task.Exception != null)
-                throw task.Exception;
+            })
+            .Wait(timeout)
+            .Should().BeTrue("Timeout");
 
             trace.Should().HaveCount(sequenceLength * 2);
             for(int i = 0; i < trace.Count; i += 2) {
@@ -54,7 +54,7 @@ namespace ParallelZipNet.Tests {
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(10)]
-        public async Task NormalProcessing_Test(int jobCount) {
+        public void NormalProcessing_Test(int jobCount) {
             int sequenceLength = jobCount * 10;
 
             List<int> temp = new List<int>(sequenceLength);
@@ -63,9 +63,8 @@ namespace ParallelZipNet.Tests {
             Func<int, int> transform1 = x => x * 10;
             Func<int, string> transform2 = x => $"Value : {x}";
 
-            Task task = Task.Run(() => {
-                results = Enumerable
-                    .Range(1, sequenceLength)
+            Task.Run(() => {
+                results = Sequence(sequenceLength, 5)
                     .AsParallel(jobCount)
                     .Map(transform1)
                     .Do(x => {                        
@@ -77,12 +76,8 @@ namespace ParallelZipNet.Tests {
                     .AsEnumerable()
                     .ToList();
             })
-            .WithTimeout(timeout);
-
-            await task;
-
-            if(task.Exception != null)
-                throw task.Exception;
+            .Wait(timeout)
+            .Should().BeTrue("Timeout");
 
             temp.Should().BeEquivalentTo(Enumerable
                 .Range(1, sequenceLength)
@@ -109,8 +104,7 @@ namespace ParallelZipNet.Tests {
             List<int> results = new List<int>();
 
             Task task = Task.Run(() => {
-                 IEnumerable<int> values = Enumerable
-                    .Range(1, sequenceLength)
+                 IEnumerable<int> values = Sequence(sequenceLength, 5)
                     .AsParallel(jobCount)
                     .AsEnumerable(cancellationToken);
                 
@@ -139,46 +133,38 @@ namespace ParallelZipNet.Tests {
         }
 
         [Fact]    
-        public async Task JobLogger_Test() {
+        public void JobLogger_Test() {
             List<int> loggerResult = new List<int>();
 
             var fakeLogger = A.Fake<IJobLogger>();
             A.CallTo(() => fakeLogger.LogResultsCount(A<int>._))
                 .Invokes((int resultsCount) => loggerResult.Add(resultsCount));
 
-            Task task = Task.Run(() => {
-                Enumerable
-                    .Range(1, 10)
-                    .Select(x => { Thread.Sleep(5); return x; })                    
+            Task.Run(() => {
+                Sequence(10, 5)
                     .AsParallel(5)
                     .AsEnumerable(null, null, fakeLogger)
                     .ToList();
             })
-            .WithTimeout(timeout);
-
-            await task;
+            .Wait(timeout)
+            .Should().BeTrue("Timeout");
 
             loggerResult.Should().HaveCountGreaterThan(0);            
         }
 
         [Fact]
-        public async Task ErrorHandling_Test() {
+        public void ErrorHandling_Test() {
             List<Exception> errors = new List<Exception>();
 
-            Task task = Task.Run(() => {
-                Enumerable
-                    .Range(1, 10)                    
+            Task.Run(() => {
+                Sequence(10, 5)
                     .AsParallel(5)
                     .Do(_ => throw new InvalidOperationException())
                     .AsEnumerable(null, err => errors.Add(err))
                     .ToList();
             })
-            .WithTimeout(timeout);
-
-            await task;
-
-            if(task.Exception != null)
-                throw task.Exception;
+            .Wait(timeout)
+            .Should().BeTrue("Timeout");
 
             errors.Should().NotBeEmpty()
                 .And.ContainItemsAssignableTo<InvalidOperationException>();
