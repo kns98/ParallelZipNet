@@ -141,7 +141,7 @@ namespace ParallelZipNet.Tests {
             .Wait(timeout)
             .Should().BeTrue("Timeout");
 
-            loggerResult.Should().HaveCountGreaterThan(0);            
+            loggerResult.Should().NotBeEmpty();            
         }
 
         [Fact]
