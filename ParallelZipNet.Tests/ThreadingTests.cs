@@ -2,11 +2,13 @@
 using ParallelZipNet.Threading;
 using Xunit;
 using FluentAssertions;
+using FakeItEasy;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Tests {
     public class ThreadingTests {
@@ -134,6 +136,29 @@ namespace ParallelZipNet.Tests {
                 throw cancellationTask.Exception;
 
             results.Should().HaveCountLessOrEqualTo(jobCount * resultTreshold);
+        }
+
+        [Fact]    
+        public async Task JobLogger_Test() {
+            List<int> loggerResult = new List<int>();
+
+            var fakeLogger = A.Fake<IJobLogger>();
+            A.CallTo(() => fakeLogger.LogResultsCount(A<int>._))
+                .Invokes((int resultsCount) => loggerResult.Add(resultsCount));
+
+            Task task = Task.Run(() => {
+                Enumerable
+                    .Range(1, 10)
+                    .Select(x => { Thread.Sleep(5); return x; })                    
+                    .AsParallel(5)
+                    .AsEnumerable(null, null, fakeLogger)
+                    .ToList();
+            })
+            .WithTimeout(timeout);
+
+            await task;
+
+            loggerResult.Should().HaveCountGreaterThan(0);            
         }
 
         [Fact]
