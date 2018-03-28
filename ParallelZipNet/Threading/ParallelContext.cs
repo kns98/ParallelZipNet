@@ -54,9 +54,6 @@ namespace ParallelZipNet.Threading {
             }                
 
             while(true) {
-                if(cancellationToken.IsCancelled)
-                    break;
-
                 if(HandleFailure()) {
                     cancellationToken.Cancel();                    
                     break;

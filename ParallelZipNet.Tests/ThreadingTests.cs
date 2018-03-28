@@ -16,7 +16,10 @@ namespace ParallelZipNet.Tests {
 
         static IEnumerable<int> Sequence(int count, int interval = 0) {
             return Enumerable.Range(1, count)
-                .Select(x => { Thread.Sleep(interval); return x; });
+                .Select(x => { 
+                    Thread.Sleep(interval);
+                    return x;
+                });
         }
 
         [Theory]
@@ -24,6 +27,9 @@ namespace ParallelZipNet.Tests {
         [InlineData(5)]
         [InlineData(10)]
         public void LockContext_Test(int jobCount) {
+            const string enter = "Enter";
+            const string leave = "Leave";
+
             int sequenceLength = jobCount * 10;
 
             var trace = new List<string>();
@@ -31,9 +37,9 @@ namespace ParallelZipNet.Tests {
             Task.Run(() => {
                 Sequence(sequenceLength)
                     .Select(x => {    
-                        trace.Add("Enter");
+                        trace.Add(enter);
                         Thread.Sleep(10);
-                        trace.Add("Leave");
+                        trace.Add(leave);
                         return x;
                     })
                     .AsParallel(jobCount)
@@ -45,8 +51,8 @@ namespace ParallelZipNet.Tests {
 
             trace.Should().HaveCount(sequenceLength * 2);
             for(int i = 0; i < trace.Count; i += 2) {
-                trace[i].Should().Be("Enter");
-                trace[i + 1].Should().Be("Leave");
+                trace[i].Should().Be(enter);
+                trace[i + 1].Should().Be(leave);
             }
         }
 
@@ -144,22 +150,35 @@ namespace ParallelZipNet.Tests {
             loggerResult.Should().NotBeEmpty();            
         }
 
-        [Fact]
-        public void ErrorHandling_Test() {
-            List<Exception> errors = new List<Exception>();
+        [Theory]
+        [InlineData(2)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public void ErrorHandling_Test(int jobCount) {
+            int sequenceLength = jobCount * 10;
 
+            List<Exception> errors = new List<Exception>();
+            List<int> results = null;
+            
             Task.Run(() => {
-                Sequence(10, 5)
-                    .AsParallel(5)
-                    .Do(_ => throw new InvalidOperationException())
-                    .AsEnumerable(null, err => errors.Add(err))
+                results = Sequence(sequenceLength, 5)
+                    .AsParallel(jobCount)
+                    .Do(value => {
+                        if(value == 1)
+                            throw new InvalidOperationException();
+                    })
+                    .AsEnumerable(null, err => {
+                        errors.Add(err);
+                    })
                     .ToList();
             })
             .Wait(timeout)
             .Should().BeTrue("Timeout");
 
-            errors.Should().NotBeEmpty()
+            errors.Should().HaveCount(1)
                 .And.ContainItemsAssignableTo<InvalidOperationException>();
+
+            results.Should().HaveCountLessThan(jobCount);
         }
     }
 }
