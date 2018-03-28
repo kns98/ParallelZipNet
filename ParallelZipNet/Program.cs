@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
@@ -122,7 +121,7 @@ namespace ParallelZipNet {
             Console.WriteLine($"TODO : Help");
         }
 
-        static void ProcessFile(string src, string dest, Action<IBinaryReader, IBinaryWriter> processor) {
+        static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {
             var srcInfo = new FileInfo(src);
             if(!srcInfo.Exists)
                 throw new Exception($"The \"{src}\" source file doens't exist");
@@ -135,8 +134,8 @@ namespace ParallelZipNet {
                 else
                     return;
             }
-            using(var reader = new BinaryFileReader(srcInfo))
-            using(var writer = new BinaryFileWriter(destInfo)) {
+            using(var reader = new BinaryReader(srcInfo.OpenRead()))
+            using(var writer = new BinaryWriter(destInfo.OpenWrite())) {
                 processor(reader, writer);
             }
         }

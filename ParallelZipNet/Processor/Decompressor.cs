@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using ParallelZipNet.ReadWrite;
 using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
-        public static void Run(IBinaryReader reader, IBinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
+        public static void Run(BinaryReader reader, BinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
             Loggers loggers = null) {
 
             Guard.NotNull(reader, nameof(reader));
@@ -36,8 +35,8 @@ namespace ParallelZipNet.Processor {
             int index = 0;
             foreach(var chunk in chunks) {
                 long position = (long)chunk.Index * Constants.CHUNK_SIZE;
-                writer.Seek(position);
-                writer.WriteBuffer(chunk.Data);
+                writer.BaseStream.Seek(position, SeekOrigin.Begin);
+                writer.Write(chunk.Data);
 
                 chunkLogger?.LogChunk("Write", chunk);
                 defaultLogger?.LogChunksProcessed(++index, chunkCount);
@@ -47,18 +46,18 @@ namespace ParallelZipNet.Processor {
                 throw error;
         }
 
-        static IEnumerable<Chunk> ReadSource(IBinaryReader reader, int chunkCount) {
+        static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkCount) {
             for(int i = 0; i < chunkCount; i++) {
                 int chunkIndex = reader.ReadInt32();
                 if(chunkIndex < 0)
                     throw new InvalidDataException("FileCorruptedMessage_1");
 
                 int chunkLength = reader.ReadInt32();
-                long bytesToRead = reader.Length - reader.Position;
+                long bytesToRead = reader.BaseStream.Length - reader.BaseStream.Position;
                 if(chunkLength <= 0 || chunkLength > bytesToRead)
                     throw new InvalidDataException("FileCorruptedMessage_2");
 
-                yield return new Chunk(chunkIndex, reader.ReadBuffer(chunkLength));                
+                yield return new Chunk(chunkIndex, reader.ReadBytes(chunkLength));                
             }
         }
 
