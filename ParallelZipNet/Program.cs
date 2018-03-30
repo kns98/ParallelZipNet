@@ -19,9 +19,10 @@ namespace ParallelZipNet {
             LOG_JOBS = "--log-jobs",
             JOBCOUNT = "JOBCOUNT",
             JOBCOUNT_KEY = "--job-count",
-            JOBCOUNT_VALUE = "JOBCOUNT_VALUE";
-
-        const int maxJobCount = 20;
+            JOBCOUNT_VALUE = "JOBCOUNT_VALUE",
+            CHUNKSIZE = "CHUNKSIZE",
+            CHUNKSIZE_KEY = "--chunk-size",
+            CHUNKSIZE_VALUE = "CHUNKSIZE_VALUE";        
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
@@ -34,12 +35,14 @@ namespace ParallelZipNet {
             commands.Register(Compress)
                 .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
+                .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
 
             commands.Register(Decompress)
                 .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
+                .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
         }
@@ -84,7 +87,7 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, GetJobCount(options), Constants.DEFAULT_CHUNK_SIZE,
+            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, GetJobCount(options), GetChunkSize(options),
                 cancellationToken, GetLoggers(options)));
         }
 
@@ -93,7 +96,7 @@ namespace ParallelZipNet {
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
             
-            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, GetJobCount(options), Constants.DEFAULT_CHUNK_SIZE,
+            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, GetJobCount(options), GetChunkSize(options),
                 cancellationToken, GetLoggers(options)));
         }
 
@@ -101,12 +104,24 @@ namespace ParallelZipNet {
             Option jobs = options.FirstOrDefault(x => x.Name == JOBCOUNT);            
             if(jobs != null) {                        
                 try {
-                    return jobs.GetIntegerParam(JOBCOUNT_VALUE, 1, maxJobCount);
+                    return jobs.GetIntegerParam(JOBCOUNT_VALUE, 1, Constants.MAX_JOB_COUNT);
                 }
                 catch {                    
                 }
             }
-            return Math.Max(Environment.ProcessorCount - 1, 1);
+            return Constants.DEFAULT_JOB_COUNT;
+        }
+
+        static int GetChunkSize(IEnumerable<Option> options) {
+            Option chunks = options.FirstOrDefault(x => x.Name == CHUNKSIZE);
+            if(chunks != null) {
+                try {
+                    return chunks.GetIntegerParam(CHUNKSIZE_VALUE, Constants.MIN_CHUNK_SIZE, Constants.MAX_CHUNK_SIZE);
+                }
+                catch {                    
+                }
+            }
+            return Constants.DEFAULT_CHUNK_SIZE;
         }
 
         static Loggers GetLoggers(IEnumerable<Option> options) {
