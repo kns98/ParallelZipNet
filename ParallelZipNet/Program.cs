@@ -5,6 +5,7 @@ using System.IO;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet {
     class Program {
@@ -83,7 +84,8 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, cancellationToken, GetJobCount(options), GetLoggers(options)));
+            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, GetJobCount(options), Constants.DEFAULT_CHUNK_SIZE,
+                cancellationToken, GetLoggers(options)));
         }
 
         static void Decompress(IEnumerable<Option> options) {
@@ -91,7 +93,8 @@ namespace ParallelZipNet {
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
             
-            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, cancellationToken, GetJobCount(options), GetLoggers(options)));
+            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, GetJobCount(options), Constants.DEFAULT_CHUNK_SIZE,
+                cancellationToken, GetLoggers(options)));
         }
 
         static int GetJobCount(IEnumerable<Option> options) {

@@ -8,12 +8,13 @@ using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
-        public static void Run(BinaryReader reader, BinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
-        Loggers loggers = null) {
+        public static void Run(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
+            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
             Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
+            Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
 
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
@@ -21,10 +22,10 @@ namespace ParallelZipNet.Processor {
 
             Exception error = null;
 
-            int chunkCount = Convert.ToInt32(reader.BaseStream.Length / Constants.CHUNK_SIZE) + 1;
+            int chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
             writer.Write(chunkCount);
             
-            var chunks = ReadSource(reader) 
+            var chunks = ReadSource(reader, chunkSize) 
                 .AsParallel(jobCount)
                 .Do(x => chunkLogger?.LogChunk("Read", x))
                 .Map(ZipChunk)
@@ -45,17 +46,17 @@ namespace ParallelZipNet.Processor {
                 throw error;
         }
 
-        static IEnumerable<Chunk> ReadSource(BinaryReader reader) {
+        static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkSize) {
             bool isLastChunk;
             int chunkIndex = 0;
             do {                
                 long bytesToRead = reader.BaseStream.Length - reader.BaseStream.Position;
-                isLastChunk = bytesToRead < Constants.CHUNK_SIZE;
+                isLastChunk = bytesToRead < chunkSize;
                 int readBytes;
                 if(isLastChunk) 
                     readBytes = (int)bytesToRead;
                 else
-                    readBytes = Constants.CHUNK_SIZE;
+                    readBytes = chunkSize;
                 byte[] data = reader.ReadBytes(readBytes);
                 yield return new Chunk(chunkIndex++, data);
 

@@ -8,8 +8,8 @@ using ParallelZipNet.Logger;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
-        public static void Run(BinaryReader reader, BinaryWriter writer, Threading.CancellationToken cancellationToken, int jobCount,
-            Loggers loggers = null) {
+        public static void Run(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
+            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
@@ -34,7 +34,7 @@ namespace ParallelZipNet.Processor {
 
             int index = 0;
             foreach(var chunk in chunks) {
-                long position = (long)chunk.Index * Constants.CHUNK_SIZE;
+                long position = (long)chunk.Index * chunkSize;
                 writer.BaseStream.Seek(position, SeekOrigin.Begin);
                 writer.Write(chunk.Data);
 
