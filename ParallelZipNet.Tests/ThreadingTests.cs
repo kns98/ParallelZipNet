@@ -132,11 +132,7 @@ namespace ParallelZipNet.Tests {
 
         [Fact]    
         public void JobLogger_Test() {
-            List<int> loggerResult = new List<int>();
-
             var fakeLogger = A.Fake<IJobLogger>();
-            A.CallTo(() => fakeLogger.LogResultsCount(A<int>._))
-                .Invokes((int resultsCount) => loggerResult.Add(resultsCount));
 
             Task.Run(() => {
                 Sequence(10, 5)
@@ -147,7 +143,8 @@ namespace ParallelZipNet.Tests {
             .Wait(timeout)
             .Should().BeTrue("Timeout");
 
-            loggerResult.Should().NotBeEmpty();            
+            A.CallTo(() => fakeLogger.LogResultsCount(A<int>._))
+                .MustHaveHappened();
         }
 
         [Theory]
