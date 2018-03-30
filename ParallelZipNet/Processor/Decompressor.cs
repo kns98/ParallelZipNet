@@ -14,6 +14,7 @@ namespace ParallelZipNet.Processor {
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
             Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
+            Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
 
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
