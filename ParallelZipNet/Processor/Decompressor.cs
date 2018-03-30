@@ -23,8 +23,6 @@ namespace ParallelZipNet.Processor {
             Exception error = null;
 
             int chunkCount = reader.ReadInt32();
-            if(chunkCount <= 0)
-                throw new InvalidDataException("FileCorruptedMessage_3");
 
             var chunks = ReadSource(reader, chunkCount)
                 .AsParallel(jobCount)                
@@ -48,15 +46,18 @@ namespace ParallelZipNet.Processor {
         }
 
         static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkCount) {
+            if(chunkCount <= 0)
+                throw new InvalidDataException();
+
             for(int i = 0; i < chunkCount; i++) {
                 int chunkIndex = reader.ReadInt32();
                 if(chunkIndex < 0)
-                    throw new InvalidDataException("FileCorruptedMessage_1");
+                    throw new InvalidDataException();
 
                 int chunkLength = reader.ReadInt32();
                 long bytesToRead = reader.BaseStream.Length - reader.BaseStream.Position;
                 if(chunkLength <= 0 || chunkLength > bytesToRead)
-                    throw new InvalidDataException("FileCorruptedMessage_2");
+                    throw new InvalidDataException();
 
                 yield return new Chunk(chunkIndex, reader.ReadBytes(chunkLength));                
             }
