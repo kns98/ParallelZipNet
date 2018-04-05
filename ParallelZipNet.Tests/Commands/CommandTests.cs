@@ -89,6 +89,20 @@ namespace ParallelZipNet.Tests.Commands {
             A.CallTo(() => fakeOperation.Invoke(A<IEnumerable<Option>>._)).MustHaveHappened();            
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("Any")]
+        public void EmptyCommand_Test(params string[] args) {
+            var fakeOperation = A.Fake<Action<IEnumerable<Option>>>();
+            var command = new Command(fakeOperation);
+
+            bool success = command.TryParse(args ?? new string[0], out Action action);
+
+            success.Should().BeFalse();            
+            action.Should().BeNull();            
+        }
+
         void Assert_NoParameters_Success(bool withRequiredSection, string[] args) {
             var fakeOperation = A.Fake<Action<IEnumerable<Option>>>();
 
