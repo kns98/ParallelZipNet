@@ -2,7 +2,7 @@
 
 namespace ParallelZipNet.Utils {
     static class Constants {        
-        public const int DEFAULT_CHUNK_SIZE = (1 << 20); // 1MB
+        public const int DEFAULT_CHUNK_SIZE = (1 << 18); // 256KB
         public const int MIN_CHUNK_SIZE = (1 << 10); // 1KB
         public const int MAX_CHUNK_SIZE = (1 << 30); // 1GB
         
