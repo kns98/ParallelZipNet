@@ -135,10 +135,6 @@ namespace ParallelZipNet {
             return loggers;
         }
 
-        static void Help() {
-            Console.WriteLine($"TODO : Help");
-        }
-
         static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {
             var srcInfo = new FileInfo(src);
             if(!srcInfo.Exists)
@@ -163,5 +159,26 @@ namespace ParallelZipNet {
             return Console.ReadLine().TrimStart().TrimEnd().ToUpper() != "N";
         }
 
+        static void Help() {
+            Console.WriteLine(
+@"ParallelZipNet by Roman Ageev (https://github.com/RomanAgeev/ParallelZipNet)
+
+Usage: ParallelZipNet (<Compress> | <Decompress> | <Help>)
+
+Compress:
+    (compress | c) <src> <dest> [<Options>]
+    
+Decompress:
+    (decompress | d) <src> <dest> [<Options>]    
+
+Options:
+    --job-count <number>    a number of concurrent threads
+    --chunk-size <number>   a size of chunk processed at once
+    --log-chunks            log chunks details to console
+    --log-jobs              log job details to console
+
+Help:
+    --help, -h, -?");
+        }
     }
 }
