@@ -146,7 +146,7 @@ namespace ParallelZipNet {
 
             var destInfo = new FileInfo(dest);
             if(destInfo.Exists) {
-                if(ConsoleHelper.AskYesNoQuestion($"The \"{dest}\" file already exists, replace?")) {
+                if(AskYesNoQuestion($"The \"{dest}\" file already exists, replace?")) {
                     destInfo.Delete();
                 }
                 else
@@ -157,5 +157,11 @@ namespace ParallelZipNet {
                 processor(reader, writer);
             }
         }
+
+        static bool AskYesNoQuestion(string quiestion) {
+            Console.WriteLine($"{quiestion} (Y/n)");
+            return Console.ReadLine().TrimStart().TrimEnd().ToUpper() != "N";
+        }
+
     }
 }
