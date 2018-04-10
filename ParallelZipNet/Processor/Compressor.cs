@@ -20,17 +20,17 @@ namespace ParallelZipNet.Processor {
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
             IJobLogger jobLogger = loggers?.JobLogger;
 
-            Exception error = null;
+            List<Exception> errors = new List<Exception>();
 
             int chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
             writer.Write(chunkCount);
             
             var chunks = ReadSource(reader, chunkSize) 
                 .AsParallel(jobCount)
-                .Do(x => chunkLogger?.LogChunk("Read", x))
+                .Do(x => chunkLogger?.LogChunk("Read", x))                
                 .Map(ZipChunk)
                 .Do(x => chunkLogger?.LogChunk("Proc", x))                
-                .AsEnumerable(cancellationToken, x => error = x, jobLogger);
+                .AsEnumerable(cancellationToken, x => errors.Add(x), jobLogger);
             
             int index = 0;
             foreach(var chunk in chunks) {
@@ -42,8 +42,8 @@ namespace ParallelZipNet.Processor {
                 defaultLogger?.LogChunksProcessed(++index, chunkCount);
             }
 
-            if(error != null)
-                throw error;
+            if(errors.Count > 0)            
+                throw new AggregateException(errors);
         }
 
         static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkSize) {

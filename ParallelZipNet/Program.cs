@@ -69,6 +69,14 @@ namespace ParallelZipNet {
                 Console.WriteLine("Unknown Command. Use --help for more information.");
                 return 1;
             }
+            catch(AggregateException ex) {
+                Console.WriteLine();
+                ex.Handle(x => {
+                    Console.WriteLine(x.Message);
+                    return true;
+                });
+                return 1;
+            }
             catch(Exception e) {
                 Console.WriteLine();
                 Console.WriteLine(e.Message);
