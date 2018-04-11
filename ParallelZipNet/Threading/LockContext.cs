@@ -4,6 +4,7 @@ using ParallelZipNet.Utils;
 namespace ParallelZipNet.Threading {
         public class LockContext<T> {
         readonly IEnumerator<T> enumerator;
+        readonly object _lock = new object();
 
         public LockContext(IEnumerable<T> enumeration) {
             Guard.NotNull(enumeration, nameof(enumeration));
@@ -15,7 +16,7 @@ namespace ParallelZipNet.Threading {
             while(true) {
                 T result = default(T);
                 bool success = false;                
-                lock(enumerator) {
+                lock(_lock) {
                     success = enumerator.MoveNext();
                     if(success)
                         result = enumerator.Current;

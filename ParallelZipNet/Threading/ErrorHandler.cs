@@ -4,15 +4,21 @@ using System.Collections.Generic;
 namespace ParallelZipNet.Threading {
     public class ErrorHandler {
         readonly List<Exception> errors = new List<Exception>();
+        readonly object _lock = new object();
 
         public void Handle(Exception error) {
-            lock(errors) {
+            lock(_lock) {
                 errors.Add(error);
             }
         }
 
         public void ThrowIfFailed() {
-            if(errors.Count > 0)
+            int count = 0;
+            lock(_lock) {
+                count = errors.Count;
+            }
+
+            if(count > 0)
                 throw new AggregateException(errors);
         }
     }
