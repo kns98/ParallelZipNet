@@ -17,8 +17,7 @@ namespace ParallelZipNet.Threading {
             var failedJobs = jobs
                 .Where(job => job.Error != null)
                 .ToList();
-            if(errorHandler != null)
-                failedJobs.ForEach(job => errorHandler.Handle(job.Error));
+            failedJobs.ForEach(job => errorHandler.Handle(job.Error));
             return failedJobs.Count > 0;
         }                
          
