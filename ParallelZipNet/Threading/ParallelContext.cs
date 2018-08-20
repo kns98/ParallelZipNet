@@ -13,6 +13,15 @@ namespace ParallelZipNet.Threading {
     }
 
      public class ParallelContext<T> {        
+        static bool HandleErrors(IEnumerable<Job<T>> jobs, ErrorHandler errorHandler) {
+            var failedJobs = jobs
+                .Where(job => job.Error != null)
+                .ToList();
+            if(errorHandler != null)
+                failedJobs.ForEach(job => errorHandler.Handle(job.Error));
+            return failedJobs.Count > 0;
+        }                
+         
         readonly IEnumerable<T> enumeration;
         readonly int jobCount;        
 
@@ -46,17 +55,8 @@ namespace ParallelZipNet.Threading {
                 .Select(i => new Job<T>($"{i}", enumeration, cancellationToken))
                 .ToArray();
 
-            bool HandleFailure() {
-                var failedJobs = jobs
-                    .Where(job => job.Error != null)
-                    .ToList();
-                if(errorHandler != null)
-                    failedJobs.ForEach(job => errorHandler.Handle(job.Error));
-                return failedJobs.Count > 0;
-            }                
-
             while(true) {
-                if(HandleFailure()) {
+                if(HandleErrors(jobs, errorHandler)) {
                     cancellationToken.Cancel();                    
                     break;
                 }
@@ -73,7 +73,7 @@ namespace ParallelZipNet.Threading {
                     yield return result;
 
                 if(jobs.All(job => job.IsFinished)) {
-                    HandleFailure();
+                    HandleErrors(jobs, errorHandler);
                     break;
                 }
                 else
