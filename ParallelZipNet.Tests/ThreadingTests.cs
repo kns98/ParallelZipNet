@@ -137,7 +137,7 @@ namespace ParallelZipNet.Tests {
             Task.Run(() => {
                 Sequence(10, 5)
                     .AsParallel(5)
-                    .AsEnumerable(null, null, fakeLogger)
+                    .AsEnumerable(null, fakeLogger)
                     .ToList();
             })
             .Wait(timeout)
@@ -147,35 +147,25 @@ namespace ParallelZipNet.Tests {
                 .MustHaveHappened();
         }
 
-        [Theory]
-        [InlineData(2)]
-        [InlineData(5)]
-        [InlineData(10)]
-        public void ErrorHandling_Test(int jobCount) {
-            int sequenceLength = jobCount * 10;
-
-            List<Exception> errors = new List<Exception>();
+        [Fact]
+        public void ErrorHandling_Test() {
             List<int> results = null;
             
-            Task.Run(() => {
-                results = Sequence(sequenceLength, 5)
-                    .AsParallel(jobCount)
-                    .Do(value => {
-                        if(value == 1)
+            Action act = () => {            
+                Task.Run(() => {
+                    results = Sequence(50, 5)
+                        .AsParallel(5)
+                        .Do(_ => {
                             throw new InvalidOperationException();
-                    })
-                    .AsEnumerable(null, err => {
-                        errors.Add(err);
-                    })
-                    .ToList();
-            })
-            .Wait(timeout)
-            .Should().BeTrue("Timeout");
+                        })
+                        .AsEnumerable()
+                        .ToList();
+                })
+                .Wait(timeout)
+                .Should().BeTrue("Timeout");
+            };
 
-            errors.Should().HaveCount(1)
-                .And.ContainItemsAssignableTo<InvalidOperationException>();
-
-            results.Should().HaveCountLessThan(jobCount);
+            act.Should().Throw<InvalidOperationException>();
         }
     }
 }

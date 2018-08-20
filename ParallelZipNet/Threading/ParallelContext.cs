@@ -36,9 +36,11 @@ namespace ParallelZipNet.Threading {
             return Map<T>(t => { action(t); return t; });
         }
 
-        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, Action<Exception> errorHandler = null, IJobLogger logger = null) {
+        public IEnumerable<T> AsEnumerable(CancellationToken cancellationToken = null, IJobLogger logger = null) {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
+
+            var errorHandler = new ErrorHandler();
 
             Job<T>[] jobs = Enumerable.Range(1, jobCount)
                 .Select(i => new Job<T>($"{i}", enumeration, cancellationToken))
@@ -49,7 +51,7 @@ namespace ParallelZipNet.Threading {
                     .Where(job => job.Error != null)
                     .ToList();
                 if(errorHandler != null)
-                    failedJobs.ForEach(job => errorHandler(job.Error));
+                    failedJobs.ForEach(job => errorHandler.Handle(job.Error));
                 return failedJobs.Count > 0;
             }                
 
@@ -80,6 +82,8 @@ namespace ParallelZipNet.Threading {
 
             foreach(var job in jobs)
                 job.Dispose();
+
+            errorHandler.ThrowIfFailed();
         }
     }
 }

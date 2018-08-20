@@ -54,7 +54,7 @@ namespace ParallelZipNet.Tests {
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
                 Action act = () => Decompressor.Run(srcReader, destWriter, 1, chunkSize);
-                act.Should().ThrowExactly<AggregateException>();                
+                act.Should().Throw<InvalidDataException>();                
             }
         }
 
@@ -70,7 +70,7 @@ namespace ParallelZipNet.Tests {
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
                 Action act = () => Compressor.Run(srcReader, destWriter, 1, chunkSize, null, new Loggers { ChunkLogger = fakeLogger });
-                act.Should().ThrowExactly<AggregateException>();
+                act.Should().Throw<InvalidOperationException>();
             }
         }
 
