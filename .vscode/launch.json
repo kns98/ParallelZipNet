@@ -12,7 +12,7 @@
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/ParallelZipNet/bin/Debug/netcoreapp2.0/ParallelZipNet.dll",
             // "args": ["--decompress", "Sandbox/video.gzx", "Sandbox/video$.MP4"],
-            "args": ["compress", "./ParallelZipNet/Sandbox/video.MP4", "./ParallelZipNet/Sandbox/video.gzx"],
+            "args": ["compress2", "./Sandbox/andes.jpg", "./Sandbox/andes2.gzx"],
             // "args": ["--help"],
             // "args": ["xxx"],
             "cwd": "${workspaceFolder}",
