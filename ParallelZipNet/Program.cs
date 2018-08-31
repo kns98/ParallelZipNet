@@ -6,6 +6,7 @@ using ParallelZipNet.Processor;
 using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
+using ParallelZipNet.Processor2;
 
 namespace ParallelZipNet {
     class Program {
@@ -45,6 +46,9 @@ namespace ParallelZipNet {
                 .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
+
+            commands.Register(Compress2)
+                .Required("COMPRESS2", new[] { "compress2" }, new[] { SRC, DEST });
         }
 
         static int Main(string[] args) {
@@ -104,6 +108,14 @@ namespace ParallelZipNet {
             
             ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, GetJobCount(options), GetChunkSize(options),
                 cancellationToken, GetLoggers(options)));
+        }
+
+        static void Compress2(IEnumerable<Option> options) {
+            Option compress2 = options.First(x => x.Name == "COMPRESS2");
+            string src = compress2.GetStringParam(SRC);
+            string dest = compress2.GetStringParam(DEST);
+
+            ProcessFile(src, dest, (reader, writer) => Compressor2.Run(reader, writer));
         }
 
         static int GetJobCount(IEnumerable<Option> options) {
