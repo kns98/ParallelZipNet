@@ -49,6 +49,9 @@ namespace ParallelZipNet {
 
             commands.Register(Compress2)
                 .Required("COMPRESS2", new[] { "compress2" }, new[] { SRC, DEST });
+
+            commands.Register(Compress2)
+                .Required("DECOMPRESS2", new[] { "decompress2" }, new[] { SRC, DEST });                
         }
 
         static int Main(string[] args) {
@@ -117,6 +120,14 @@ namespace ParallelZipNet {
 
             ProcessFile(src, dest, (reader, writer) => Compressor2.Run(reader, writer));
         }
+
+        static void Decompress2(IEnumerable<Option> options) {
+            Option decompress2 = options.First(x => x.Name == "DECOMPRESS2");
+            string src = decompress2.GetStringParam(SRC);
+            string dest = decompress2.GetStringParam(DEST);
+
+            ProcessFile(src, dest, (reader, writer) => Decompressor2.Run(reader, writer));
+        }        
 
         static int GetJobCount(IEnumerable<Option> options) {
             Option jobs = options.FirstOrDefault(x => x.Name == JOBCOUNT);            

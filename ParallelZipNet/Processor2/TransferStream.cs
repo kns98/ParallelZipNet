@@ -1,33 +1,36 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using ParallelZipNet.Processor;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Processor2 {
     public class TransferStream : Stream {
-        Stream writableStream;
-        BlockingCollection<byte[]> chunks;
-        Task task1, task2;
+        BlockingCollection<Chunk> chunks;
+        Task[] tasks;
+        string name;
 
-        public TransferStream(Stream writableStream) {
-            Guard.NotNull(writableStream, nameof(writableStream));
+        volatile int index = 0;
 
-            this.writableStream = writableStream;
-            this.chunks = new BlockingCollection<byte[]>();
-            this.task1 = Task.Factory.StartNew(() => {
-                foreach(byte[] chunk in chunks.GetConsumingEnumerable()) {
-                    Console.WriteLine($"{Task.CurrentId} End Writing Chunk {chunk.Length}");
-                    this.writableStream.Write(chunk, 0, chunk.Length);
-                }
-            }, TaskCreationOptions.LongRunning);
+        public TransferStream(string name, params Stream[] writableStreams) {
+            Guard.NotNull(writableStreams, nameof(writableStreams));
 
-            this.task2 = Task.Factory.StartNew(() => {
-                foreach(byte[] chunk in chunks.GetConsumingEnumerable()) {                    
-                    Console.WriteLine($"{Task.CurrentId} End Writing Chunk {chunk.Length}");
-                    this.writableStream.Write(chunk, 0, chunk.Length);
-                }
-            }, TaskCreationOptions.LongRunning);            
+            this.chunks = new BlockingCollection<Chunk>();
+            this.name = name;
+
+            tasks = new Task[writableStreams.Length];
+
+            for(int i = 0; i < writableStreams.Length; i++) {
+                int index = i;
+                tasks[index] = Task.Factory.StartNew(() => {
+                    foreach(Chunk chunk in chunks.GetConsumingEnumerable()) {
+                        Console.WriteLine($"{name} {Task.CurrentId} End Writing Chunk {chunk.Index} {chunk.Data.Length}");
+                        writableStreams[index].Write(chunk.Data, 0, chunk.Data.Length);
+                    }
+                }, TaskCreationOptions.LongRunning);
+            }
         }
 
         public override bool CanRead => false;
@@ -46,13 +49,13 @@ namespace ParallelZipNet.Processor2 {
         public override void Flush() {           
             Console.WriteLine("Flush");
         }
-
+ 
         public override void Close() {
             chunks.CompleteAdding();
             try {
-                Console.WriteLine("Close - Waiting");
-                Task.WhenAll(task1, task2).GetAwaiter().GetResult();
-                Console.WriteLine("Close - Finish");
+                Console.WriteLine($"{name} {Task.CurrentId} Close - Waiting");
+                Task.WhenAll(tasks).GetAwaiter().GetResult();
+                Console.WriteLine($"{name} {Task.CurrentId} Close - Finish");
             }
             finally {                
                 base.Close();
@@ -72,10 +75,12 @@ namespace ParallelZipNet.Processor2 {
         }
 
         public override void Write(byte[] buffer, int offset, int count) {
-            Console.WriteLine($"{Task.CurrentId} Start Writing Chunk");
-            var chunk = new byte[count];
-            Buffer.BlockCopy(buffer, offset, chunk, 0, count);
-            chunks.Add(chunk);
+            Interlocked.Increment(ref index);
+
+            Console.WriteLine($"{name} {Task.CurrentId} Start Writing Chunk {index}");
+            var buff = new byte[count];
+            Buffer.BlockCopy(buffer, offset, buff, 0, count);            
+            chunks.Add(new Chunk(index, buff));
         }
     }
 }
