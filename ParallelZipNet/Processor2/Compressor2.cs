@@ -15,7 +15,9 @@ namespace ParallelZipNet.Processor2 {
             //     reader.BaseStream.CopyTo(map);
             // }
 
-            var blockReader = new Block(_ => ReadSource(reader, Constants.DEFAULT_CHUNK_SIZE));
+            var readEnumerator = ReadSource(reader, Constants.DEFAULT_CHUNK_SIZE).GetEnumerator();
+
+            var blockReader = new Block(_ => readEnumerator.MoveNext() ? readEnumerator.Current : null);
             var blocksZip = Enumerable.Range(0, 1).Select(_ => new Block(chunk => ZipChunk((Chunk)chunk))).ToArray();
             var blockWriter = new Block(chunk => {
                 writer.Write(((Chunk)chunk).Index);
