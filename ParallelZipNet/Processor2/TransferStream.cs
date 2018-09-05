@@ -14,20 +14,21 @@ namespace ParallelZipNet.Processor2 {
 
         volatile int index = 0;
 
-        public TransferStream(string name, params Stream[] writableStreams) {
-            Guard.NotNull(writableStreams, nameof(writableStreams));
+        public TransferStream(string name, params Func<Chunk, Chunk>[] compressors) {
+            Guard.NotNull(compressors, nameof(compressors));
 
             this.chunks = new BlockingCollection<Chunk>();
             this.name = name;
 
-            tasks = new Task[writableStreams.Length];
+            tasks = new Task[compressors.Length];
 
-            for(int i = 0; i < writableStreams.Length; i++) {
+            for(int i = 0; i < compressors.Length; i++) {
                 int index = i;
                 tasks[index] = Task.Factory.StartNew(() => {
                     foreach(Chunk chunk in chunks.GetConsumingEnumerable()) {
                         Console.WriteLine($"{name} {Task.CurrentId} End Writing Chunk {chunk.Index} {chunk.Data.Length}");
-                        writableStreams[index].Write(chunk.Data, 0, chunk.Data.Length);
+                        compressors[index](chunk);
+                        // writableStreams[index].Write(chunk.Data, 0, chunk.Data.Length);
                     }
                 }, TaskCreationOptions.LongRunning);
             }

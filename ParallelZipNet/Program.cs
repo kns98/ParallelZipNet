@@ -50,7 +50,7 @@ namespace ParallelZipNet {
             commands.Register(Compress2)
                 .Required("COMPRESS2", new[] { "compress2" }, new[] { SRC, DEST });
 
-            commands.Register(Compress2)
+            commands.Register(Decompress2)
                 .Required("DECOMPRESS2", new[] { "decompress2" }, new[] { SRC, DEST });                
         }
 
