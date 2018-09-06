@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Utils;
 
@@ -17,18 +20,29 @@ namespace ParallelZipNet.Processor2 {
 
             var readEnumerator = ReadSource(reader, Constants.DEFAULT_CHUNK_SIZE).GetEnumerator();
 
-            var blockReader = new Block(_ => readEnumerator.MoveNext() ? readEnumerator.Current : null);
-            var blocksZip = Enumerable.Range(0, 1).Select(_ => new Block(chunk => ZipChunk((Chunk)chunk))).ToArray();
-            var blockWriter = new Block(chunk => {
+            var blockReader = new Block("Reader", _ => {
+                bool next = readEnumerator.MoveNext();
+                if(next) {
+                    Console.WriteLine($"{Task.CurrentId} Read Chunk\n");
+                    return readEnumerator.Current;
+                }
+                else
+                    return null;
+            });
+            var blocksZip = Enumerable.Range(0, 6).Select((_, index) => new Block($"Zip {index}", chunk => ZipChunk((Chunk)chunk))).ToArray();
+            var blockWriter = new Block("Writer", chunk => {
+                Console.WriteLine($"{Task.CurrentId} Write Chunk {((Chunk)chunk).Index}");
                 writer.Write(((Chunk)chunk).Index);
                 writer.Write(((Chunk)chunk).Data.Length);
                 writer.Write(((Chunk)chunk).Data);
                 return null;
             });
-            blockReader
+
+            var pipeline = blockReader
                 .Pipe(blocksZip)
-                .Pipe(blockWriter)
-                .Run()
+                .Pipe(blockWriter);
+
+            pipeline.Run()
                 .GetAwaiter()
                 .GetResult();
         }
@@ -52,6 +66,7 @@ namespace ParallelZipNet.Processor2 {
         }
 
         static Chunk ZipChunk(Chunk chunk) {
+            Console.WriteLine($"{Task.CurrentId} Zip Chunk {chunk.Index}");
             MemoryStream compressed;
             using(compressed = new MemoryStream()) {
                 using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
