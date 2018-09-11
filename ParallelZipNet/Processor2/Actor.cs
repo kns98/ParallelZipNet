@@ -98,36 +98,21 @@ namespace ParallelZipNet.Processor2 {
         }
     }
 
-    public class Block2<T, U> {
+    public interface IRoutine {
+        Task Run();
+    }
+
+    public class Block2<T, U> : IRoutine {
         readonly string name;
         readonly Func<T, U> transform;
-        IReadableChannel<T> inputChannel;
-        IWritableChannel<U> outputChannel;
+        readonly IReadableChannel<T> inputChannel;
+        readonly IWritableChannel<U> outputChannel;
 
         public Block2(string name, Func<T, U> transform, IReadableChannel<T> inputChannel, IWritableChannel<U> outputChannel) {
             this.name = name;
             this.transform = transform;
             this.inputChannel = inputChannel;
             this.outputChannel = outputChannel;
-        }
-
-        public Block2<U, K> Pipe<K>(Block2<U, K> block) {
-            var channel = new Channel<U>();
-
-            InitOutputChannel(channel);
-            block.InitInputChannel(channel);
-
-            return block;
-        }
-
-        public CompositeBlock2<U, K> PipeMany<K>(params Block2<U, K>[] blocks) {
-            var channel = new Channel<U>();
-
-            InitOutputChannel(channel);
-            foreach(var block in blocks)
-                block.InitInputChannel(channel);
-
-            return new CompositeBlock2<U, K>(blocks);
         }
 
         public Task Run() {
@@ -137,40 +122,52 @@ namespace ParallelZipNet.Processor2 {
                 outputChannel.Finish();
             });
         }
-
-        internal void InitInputChannel(IReadableChannel<T> inputChannel) {
-            if(this.inputChannel != null)
-                throw new InvalidOperationException();
-
-            this.inputChannel = inputChannel;
-        }
-
-        internal void InitOutputChannel(IWritableChannel<U> outputChannel) {
-            if(this.outputChannel != null)
-                throw new InvalidOperationException();
-
-            this.outputChannel = outputChannel;
-        }
     }
 
-    public class CompositeBlock2<T, U> {
-        readonly IEnumerable<Block2<T, U>> blocks;
-
-        public CompositeBlock2(IEnumerable<Block2<T, U>> blocks) {
-            this.blocks = blocks;
+    public class Pipeline<T> : IRoutine {
+        public static Pipeline<T> FromSource(string name, SourceAction<T> source) {
+            var pipeline = new Pipeline<T>(new SourceChannel<T>(source), new IRoutine[0]);
+            return pipeline.Pipe(name, _ => _);
         }
 
-        public Block2<U, K> Pipe<K>(Block2<U, K> block) {
-            var channels = new List<Channel<U>>();
-            foreach(var item in blocks) {
-                var channel = new Channel<U>();
-                item.InitOutputChannel(channel);
-                channels.Add(channel);
-            }
+        readonly IEnumerable<IRoutine> routines;        
+        readonly IReadableChannel<T> inputChannel;
 
-            var composite = new CompositeChannel<U>(channels);
-            block.InitInputChannel(composite);
-            return block;
+        Pipeline(IReadableChannel<T> inputChannel, IEnumerable<IRoutine> routines) {
+            this.inputChannel = inputChannel;
+            this.routines = routines;
+        }
+
+        public Pipeline<U> Pipe<U>(string name, Func<T, U> transform) {            
+            var outputChannel = new Channel<U>();
+            var block = new Block2<T, U>(name, transform, inputChannel, outputChannel);            
+            return new Pipeline<U>(outputChannel, routines.Concat(new[] { block }));
+        }
+
+        public Pipeline<U> PipeMany<U>(string name, Func<T, U> transform, int degreeOfParallelism) {
+            var results = Enumerable.Range(1, degreeOfParallelism)
+                .Select(index => {
+                    var outputChannel = new Channel<U>();
+                    var block = new Block2<T, U>($"newName {index}", transform, inputChannel, outputChannel);
+                    return new {
+                        outputChannel,
+                        block
+                    };
+                });
+
+            return new Pipeline<U>(
+                new CompositeChannel<U>(results.Select(x => x.outputChannel)),
+                routines.Concat(results.Select(x => x.block)));
+
+        }
+
+        public IRoutine Done(string name, Action<T> doneAction) {
+            var block = new Block2<T, T>(name, _ => _, inputChannel, new TargetChannel<T>(doneAction));
+            return new Pipeline<T>(null, routines.Concat(new[] { block }));
+        }
+
+        public Task Run() {
+            return Task.WhenAll(routines.Select(routine => routine.Run()));
         }
     }
 

@@ -10,69 +10,24 @@ using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Processor2 {
     public static class Compressor2 {
-        public static void Run(BinaryReader reader, BinaryWriter writer) {                        
-            // using(var reduce = new TransferStream("reduce", writer.BaseStream))
-            // using(var gzip = new GZipStream(reduce, CompressionMode.Compress))
-            // // using(var gzip2 = new GZipStream(reduce, CompressionMode.Compress))
-            // using(var map = new TransferStream("map", ZipChunk, ZipChunk/*, gzip2*/)) {
-            //     reader.BaseStream.CopyTo(map);
-            // }
-
-            // var readEnumerator = ReadSource(reader, Constants.DEFAULT_CHUNK_SIZE).GetEnumerator();
-
-            // var blockReader = new Block("Reader", _ => {
-            //     bool next = readEnumerator.MoveNext();
-            //     if(next) {
-            //         Console.WriteLine($"{Task.CurrentId} Read Chunk\n");
-            //         return readEnumerator.Current;
-            //     }
-            //     else
-            //         return null;
-            // });
-            // var blocksZip = Enumerable.Range(0, 6).Select((_, index) => new Block($"Zip {index}", chunk => ZipChunk((Chunk)chunk))).ToArray();
-            // var blockWriter = new Block("Writer", chunk => {
-            //     Console.WriteLine($"{Task.CurrentId} Write Chunk {((Chunk)chunk).Index}");
-            //     writer.Write(((Chunk)chunk).Index);
-            //     writer.Write(((Chunk)chunk).Data.Length);
-            //     writer.Write(((Chunk)chunk).Data);
-            //     return null;
-            // });
-
-            // var pipeline = blockReader
-            //     .Pipe(blocksZip)
-            //     .Pipe(blockWriter);
-
-            // pipeline.Run()
-            //     .GetAwaiter()
-            //     .GetResult();
-
-
+        public static void Run(BinaryReader reader, BinaryWriter writer) {
             var readEnumerator = ReadSource(reader, Constants.DEFAULT_CHUNK_SIZE).GetEnumerator();
 
-            var blockReader = new Block2<Chunk, Chunk>("reader", data => data, new SourceChannel<Chunk>((out Chunk chunk) => {
+            Pipeline<Chunk>.FromSource("read", (out Chunk chunk) => {
                 bool next = readEnumerator.MoveNext();
                 chunk = next ? readEnumerator.Current : null;
+                Console.WriteLine($"Read {next}");
                 return next;
-            }), null);
-
-            var blockZip1 = new Block2<Chunk, Chunk>("zip 1", ZipChunk, null, null);
-            var blockZip2 = new Block2<Chunk, Chunk>("zip 2", ZipChunk, null, null);
-            
-            var blockWriter = new Block2<Chunk, Chunk>("writer", data => data, null, new TargetChannel<Chunk>((Chunk chunk) => {
+            })
+            .PipeMany("zip", ZipChunk, 2)
+            .Done("write", (Chunk chunk) => {
+                Console.WriteLine($"{Task.CurrentId} Write Chunk {chunk.Index}");
                 writer.Write(chunk.Index);
                 writer.Write(chunk.Data.Length);
                 writer.Write(chunk.Data);
-            }));
-
-            blockReader
-                .PipeMany<Chunk>(blockZip1, blockZip2)
-                .Pipe<Chunk>(blockWriter);
-
-            Task.WaitAll(
-                blockReader.Run(),
-                blockZip1.Run(),
-                blockZip2.Run(),
-                blockWriter.Run());
+            })
+            .Run()
+            .Wait();
         }
 
         static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkSize) {
