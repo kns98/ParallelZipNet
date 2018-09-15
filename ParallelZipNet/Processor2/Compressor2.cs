@@ -19,7 +19,7 @@ namespace ParallelZipNet.Processor2 {
                 Console.WriteLine($"Read {next}");
                 return next;
             })
-            .PipeMany("zip", ZipChunk, 2)
+            .PipeMany("zip", ZipChunk, 5)
             .Done("write", (Chunk chunk) => {
                 Console.WriteLine($"{Task.CurrentId} Write Chunk {chunk.Index}");
                 writer.Write(chunk.Index);

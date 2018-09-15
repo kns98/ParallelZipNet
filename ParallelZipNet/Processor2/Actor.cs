@@ -6,10 +6,6 @@ using System.Threading.Tasks;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Processor2 {
-    public interface IBlockingChannel<T> {
-        BlockingCollection<T> UnderlyingCollection { get; }
-    }
-
     public interface IReadableChannel<T> {
         bool Read(out T data);
     }
@@ -19,10 +15,10 @@ namespace ParallelZipNet.Processor2 {
         void Finish();
     }
 
-    public class Channel<T> : IReadableChannel<T>, IBlockingChannel<T>, IWritableChannel<T> {
-        readonly BlockingCollection<T> collection = new BlockingCollection<T>();
+    public class Channel<T> : IReadableChannel<T>, IWritableChannel<T> {
+        readonly BlockingCollection<T> collection = new BlockingCollection<T>(10000);
 
-        BlockingCollection<T> IBlockingChannel<T>.UnderlyingCollection => collection;
+        public BlockingCollection<T> UnderlyingCollection => collection;
 
         public bool Read(out T data) {
             data = default(T);
@@ -51,8 +47,8 @@ namespace ParallelZipNet.Processor2 {
     public class CompositeChannel<T> : IReadableChannel<T> {
         readonly BlockingCollection<T>[] collections;
 
-        public CompositeChannel(IEnumerable<IBlockingChannel<T>> channels) {
-            collections = channels.Select(channel => channel.UnderlyingCollection).ToArray();
+        public CompositeChannel(IEnumerable<BlockingCollection<T>> collections) {
+            this.collections = collections.ToArray();
         }
 
         public bool Read(out T data) {
@@ -148,15 +144,15 @@ namespace ParallelZipNet.Processor2 {
             var results = Enumerable.Range(1, degreeOfParallelism)
                 .Select(index => {
                     var outputChannel = new Channel<U>();
-                    var block = new Block2<T, U>($"newName {index}", transform, inputChannel, outputChannel);
+                    var block = new Block2<T, U>($"{name} {index}", transform, inputChannel, outputChannel);
                     return new {
                         outputChannel,
                         block
                     };
-                });
+                }).ToArray();
 
             return new Pipeline<U>(
-                new CompositeChannel<U>(results.Select(x => x.outputChannel)),
+                new CompositeChannel<U>(results.Select(x => x.outputChannel.UnderlyingCollection)),
                 routines.Concat(results.Select(x => x.block)));
 
         }
