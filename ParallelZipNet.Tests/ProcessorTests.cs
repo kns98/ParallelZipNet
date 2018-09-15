@@ -5,6 +5,7 @@ using ParallelZipNet.Processor;
 using Xunit;
 using FakeItEasy;
 using ParallelZipNet.Logger;
+using ParallelZipNet.ChunkLayer;
 
 namespace ParallelZipNet.Tests {
     public class ProcessorTests : IDisposable {

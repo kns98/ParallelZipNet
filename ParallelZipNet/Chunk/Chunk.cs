@@ -1,6 +1,6 @@
 ﻿using ParallelZipNet.Utils;
 
-namespace ParallelZipNet.Processor {
+namespace ParallelZipNet.ChunkLayer {
     public class Chunk {
         public int Index { get; private set; }
         public byte[] Data { get; private set; }

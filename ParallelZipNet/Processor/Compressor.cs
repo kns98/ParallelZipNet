@@ -5,6 +5,7 @@ using System.IO.Compression;
 using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
+using ParallelZipNet.ChunkLayer;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
@@ -23,51 +24,20 @@ namespace ParallelZipNet.Processor {
             int chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
             writer.Write(chunkCount);
             
-            var chunks = ReadSource(reader, chunkSize) 
+            var chunks = ChunkReader.ReadChunks(reader, chunkSize) 
                 .AsParallel(jobCount)
                 .Do(x => chunkLogger?.LogChunk("Read", x))                
-                .Map(ZipChunk)
+                .Map(ChunkZipper.ZipChunk)
                 .Do(x => chunkLogger?.LogChunk("Proc", x))                
                 .AsEnumerable(cancellationToken, jobLogger);
             
             int index = 0;
             foreach(var chunk in chunks) {
-                writer.Write(chunk.Index);
-                writer.Write(chunk.Data.Length);
-                writer.Write(chunk.Data);                                
+                ChunkWriter.WriteChunkCompressed(chunk, writer);
 
                 chunkLogger?.LogChunk("Write", chunk);                
                 defaultLogger?.LogChunksProcessed(++index, chunkCount);
             }
-        }
-
-        static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkSize) {
-            bool isLastChunk;
-            int chunkIndex = 0;
-            do {                
-                long bytesToRead = reader.BaseStream.Length - reader.BaseStream.Position;
-                isLastChunk = bytesToRead < chunkSize;
-                int readBytes;
-                if(isLastChunk) 
-                    readBytes = (int)bytesToRead;
-                else
-                    readBytes = chunkSize;
-                byte[] data = reader.ReadBytes(readBytes);
-                yield return new Chunk(chunkIndex++, data);
-
-            }
-            while(!isLastChunk);            
-        }
-
-        static Chunk ZipChunk(Chunk chunk) {
-            MemoryStream compressed;
-            using(compressed = new MemoryStream()) {
-                using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
-                    gzip.Write(chunk.Data, 0, chunk.Data.Length);                    
-                    
-                }
-            }       
-            return new Chunk(chunk.Index, compressed.ToArray());            
         }
     }
 }

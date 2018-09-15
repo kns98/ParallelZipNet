@@ -21,7 +21,7 @@ namespace ParallelZipNet.Pipeline {
             return Task.WhenAll(routines.Select(routine => routine.Run(cancellationToken)));
         }
 
-        public void Run(CancellationToken cancellationToken = null) {
+        public void RunSync(CancellationToken cancellationToken = null) {
             RunAsync(cancellationToken).GetAwaiter().GetResult();
         }
     }

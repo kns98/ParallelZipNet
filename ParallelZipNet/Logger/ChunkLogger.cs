@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Utils;
+using ParallelZipNet.ChunkLayer;
 
 namespace ParallelZipNet.Logger {
     public interface IChunkLogger {
