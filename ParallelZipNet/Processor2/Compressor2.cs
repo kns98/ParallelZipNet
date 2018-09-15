@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ParallelZipNet.Pipeline;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Utils;
 
