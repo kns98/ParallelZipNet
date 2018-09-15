@@ -16,7 +16,7 @@ namespace ParallelZipNet.Processor2 {
     }
 
     public class Channel<T> : IReadableChannel<T>, IWritableChannel<T> {
-        readonly BlockingCollection<T> collection = new BlockingCollection<T>(10000);
+        readonly BlockingCollection<T> collection = new BlockingCollection<T>(1000);
 
         public BlockingCollection<T> UnderlyingCollection => collection;
 
@@ -27,7 +27,7 @@ namespace ParallelZipNet.Processor2 {
                 return false;
 
             try {
-                data = collection.Take();
+                data = collection.Take();                
             }
             catch(InvalidOperationException) {
                 return false;
@@ -45,10 +45,20 @@ namespace ParallelZipNet.Processor2 {
     }
 
     public class CompositeChannel<T> : IReadableChannel<T> {
+        readonly Channel<T>[] channels;
         readonly BlockingCollection<T>[] collections;
 
-        public CompositeChannel(IEnumerable<BlockingCollection<T>> collections) {
-            this.collections = collections.ToArray();
+        public Channel<T>[] Channels => channels;
+
+        public CompositeChannel(int degreeOfParallelism) {
+            channels = new Channel<T>[degreeOfParallelism];
+            collections = new BlockingCollection<T>[degreeOfParallelism];
+
+            for(int i = 0; i < degreeOfParallelism; i++) {
+                var channel = new Channel<T>();
+                channels[i] = channel;
+                collections[i] = channel.UnderlyingCollection;
+            }
         }
 
         public bool Read(out T data) {
@@ -98,13 +108,13 @@ namespace ParallelZipNet.Processor2 {
         Task Run();
     }
 
-    public class Block2<T, U> : IRoutine {
+    public class Routine<T, U> : IRoutine {
         readonly string name;
         readonly Func<T, U> transform;
         readonly IReadableChannel<T> inputChannel;
         readonly IWritableChannel<U> outputChannel;
 
-        public Block2(string name, Func<T, U> transform, IReadableChannel<T> inputChannel, IWritableChannel<U> outputChannel) {
+        public Routine(string name, Func<T, U> transform, IReadableChannel<T> inputChannel, IWritableChannel<U> outputChannel) {
             this.name = name;
             this.transform = transform;
             this.inputChannel = inputChannel;
@@ -136,29 +146,21 @@ namespace ParallelZipNet.Processor2 {
 
         public Pipeline<U> Pipe<U>(string name, Func<T, U> transform) {            
             var outputChannel = new Channel<U>();
-            var block = new Block2<T, U>(name, transform, inputChannel, outputChannel);            
-            return new Pipeline<U>(outputChannel, routines.Concat(new[] { block }));
+            var routine = new Routine<T, U>(name, transform, inputChannel, outputChannel);            
+            return new Pipeline<U>(outputChannel, this.routines.Concat(new[] { routine }));
         }
-
+ 
         public Pipeline<U> PipeMany<U>(string name, Func<T, U> transform, int degreeOfParallelism) {
-            var results = Enumerable.Range(1, degreeOfParallelism)
-                .Select(index => {
-                    var outputChannel = new Channel<U>();
-                    var block = new Block2<T, U>($"{name} {index}", transform, inputChannel, outputChannel);
-                    return new {
-                        outputChannel,
-                        block
-                    };
-                }).ToArray();
+            var outputChannel = new CompositeChannel<U>(degreeOfParallelism);
+            var routines = outputChannel.Channels
+                .Select((channel, index) => new Routine<T, U>($"{name} {index}", transform, inputChannel, channel))
+                .ToArray();
 
-            return new Pipeline<U>(
-                new CompositeChannel<U>(results.Select(x => x.outputChannel.UnderlyingCollection)),
-                routines.Concat(results.Select(x => x.block)));
-
+            return new Pipeline<U>(outputChannel, this.routines.Concat(routines));
         }
 
         public IRoutine Done(string name, Action<T> doneAction) {
-            var block = new Block2<T, T>(name, _ => _, inputChannel, new TargetChannel<T>(doneAction));
+            var block = new Routine<T, T>(name, _ => _, inputChannel, new TargetChannel<T>(doneAction));
             return new Pipeline<T>(null, routines.Concat(new[] { block }));
         }
 
@@ -166,83 +168,5 @@ namespace ParallelZipNet.Processor2 {
             return Task.WhenAll(routines.Select(routine => routine.Run()));
         }
     }
-
-    public class Block {
-        readonly string name;
-        readonly Func<object, object> action;
-        Block[] inputs;
-        bool isStarted = false;
-
-        public BlockingCollection<object> OutputItems { get; private set; }    
-
-        public Block(string name, Func<object, object> action) {
-            this.name = name;
-            this.action = action;
-        }
-
-        void SetInputs(params Block[] inputs) {
-            this.inputs = inputs;
-            foreach(var input in inputs)
-                input.InitOutput();
-        }
-
-        void InitOutput() {
-            OutputItems = new BlockingCollection<object>();
-        }
-
-        public Block Pipe(Block[] blocks) {
-            var result = new Block("Dummy", null);
-            foreach(var block in blocks)
-                block.SetInputs(this);                
-            result.SetInputs(blocks);
-            return result;
-        }
-
-        public Block Pipe(Block block) {
-            block.SetInputs(this);
-            return block;
-        }
-
-        public Task Run() {
-            isStarted = true;
-
-            if(inputs == null) {
-                return ReadFromSource();
-            }
-
-            Task[] inputTasks = inputs.Where(input => !input.isStarted).Select(input => input.Run()).ToArray();           
-
-            Task task = Task.Run(() => {                
-                BlockingCollection<object>[] inputItems = inputs.Select(x => x.OutputItems).ToArray();
-
-                while(!inputItems.All(items => items.IsCompleted)) {
-                    object inputItem = null;
-                    try {
-                        BlockingCollection<object>.TakeFromAny(inputItems, out inputItem);
-                    }
-                    catch(ArgumentException) {
-                        Console.WriteLine($"{name} FINISHED");
-                        break;
-                    }
-                    object outputItem = action != null ? action(inputItem) : inputItem;
-                    if(OutputItems != null)
-                        OutputItems.Add(outputItem);
-                }
-                if(OutputItems != null)
-                    OutputItems.CompleteAdding();
-            });
-
-            return Task.WhenAll(inputTasks.Concat(new[] { task }));
-        }
-
-        Task ReadFromSource() {
-            return Task.Run(() => {
-                object item;
-                while((item = action(null)) != null) {
-                    OutputItems.Add(item);                    
-                }
-                OutputItems.CompleteAdding();
-            });
-        }
-    }
 }
+  

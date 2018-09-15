@@ -16,12 +16,12 @@ namespace ParallelZipNet.Processor2 {
             Pipeline<Chunk>.FromSource("read", (out Chunk chunk) => {
                 bool next = readEnumerator.MoveNext();
                 chunk = next ? readEnumerator.Current : null;
-                Console.WriteLine($"Read {next}");
+                // Console.WriteLine($"Read {next}");
                 return next;
             })
-            .PipeMany("zip", ZipChunk, 5)
+            .PipeMany("zip", ZipChunk, Constants.DEFAULT_JOB_COUNT)
             .Done("write", (Chunk chunk) => {
-                Console.WriteLine($"{Task.CurrentId} Write Chunk {chunk.Index}");
+                // Console.WriteLine($"{Task.CurrentId} Write Chunk {chunk.Index}");
                 writer.Write(chunk.Index);
                 writer.Write(chunk.Data.Length);
                 writer.Write(chunk.Data);
@@ -49,7 +49,7 @@ namespace ParallelZipNet.Processor2 {
         }
 
         static Chunk ZipChunk(Chunk chunk) {
-            Console.WriteLine($"{Task.CurrentId} Zip Chunk {chunk.Index}");
+            // Console.WriteLine($"{Task.CurrentId} Zip Chunk {chunk.Index}");
             MemoryStream compressed;
             using(compressed = new MemoryStream()) {
                 using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
