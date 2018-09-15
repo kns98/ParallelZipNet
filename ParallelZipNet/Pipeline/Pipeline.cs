@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ParallelZipNet.Pipeline.Channels;
+using ParallelZipNet.Threading;
 
 namespace ParallelZipNet.Pipeline {
-        public class Pipeline<T> : IRoutine {
+    public class Pipeline<T> {
+        static readonly Func<T, T> EmptyTransform = x => x;
+
         public static Pipeline<T> FromSource(string name, SourceAction<T> source) {
             var pipeline = new Pipeline<T>(new SourceChannel<T>(source), new IRoutine[0]);
-            return pipeline.Pipe(name, _ => _);
+            return pipeline.Pipe(name, EmptyTransform);
         }
 
         readonly IEnumerable<IRoutine> routines;        
@@ -34,13 +37,9 @@ namespace ParallelZipNet.Pipeline {
             return new Pipeline<U>(outputChannel, this.routines.Concat(routines));
         }
 
-        public IRoutine Done(string name, Action<T> doneAction) {
-            var block = new Routine<T, T>(name, _ => _, inputChannel, new TargetChannel<T>(doneAction));
-            return new Pipeline<T>(null, routines.Concat(new[] { block }));
-        }
-
-        public Task Run() {
-            return Task.WhenAll(routines.Select(routine => routine.Run()));
+        public PipelineRunner Done(string name, Action<T> doneAction) {
+            var routine = new Routine<T, T>(name, EmptyTransform, inputChannel, new TargetChannel<T>(doneAction));
+            return new PipelineRunner(this.routines.Concat(new[] { routine }));
         }
     }
 }

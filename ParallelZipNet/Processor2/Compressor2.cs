@@ -27,8 +27,7 @@ namespace ParallelZipNet.Processor2 {
                 writer.Write(chunk.Data.Length);
                 writer.Write(chunk.Data);
             })
-            .Run()
-            .Wait();
+            .Run();
         }
 
         static IEnumerable<Chunk> ReadSource(BinaryReader reader, int chunkSize) {
