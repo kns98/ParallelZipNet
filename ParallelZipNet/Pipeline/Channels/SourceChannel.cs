@@ -1,3 +1,5 @@
+using ParallelZipNet.Utils;
+
 namespace ParallelZipNet.Pipeline.Channels {
     public delegate bool SourceAction<T>(out T data);
 
@@ -5,6 +7,8 @@ namespace ParallelZipNet.Pipeline.Channels {
         readonly SourceAction<T> action;
 
         public SourceChannel(SourceAction<T> action) {
+            Guard.NotNull(action, nameof(action));
+
             this.action = action;
         }
 

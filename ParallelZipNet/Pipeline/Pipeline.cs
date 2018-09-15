@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ParallelZipNet.Pipeline.Channels;
 using ParallelZipNet.Threading;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline {
     public class Pipeline<T> {
@@ -18,6 +19,9 @@ namespace ParallelZipNet.Pipeline {
         readonly IReadableChannel<T> inputChannel;
 
         Pipeline(IReadableChannel<T> inputChannel, IEnumerable<IRoutine> routines) {
+            Guard.NotNull(inputChannel, nameof(inputChannel));
+            Guard.NotNull(routines, nameof(routines));
+
             this.inputChannel = inputChannel;
             this.routines = routines;
         }
@@ -25,7 +29,7 @@ namespace ParallelZipNet.Pipeline {
         public Pipeline<U> Pipe<U>(string name, Func<T, U> transform) {            
             var outputChannel = new Channel<U>();
             var routine = new Routine<T, U>(name, transform, inputChannel, outputChannel);            
-            return new Pipeline<U>(outputChannel, this.routines.Concat(new[] { routine }));
+            return new Pipeline<U>(outputChannel, CollectRoutines(routine));
         }
  
         public Pipeline<U> PipeMany<U>(string name, Func<T, U> transform, int degreeOfParallelism) {
@@ -34,12 +38,16 @@ namespace ParallelZipNet.Pipeline {
                 .Select((channel, index) => new Routine<T, U>($"{name} {index}", transform, inputChannel, channel))
                 .ToArray();
 
-            return new Pipeline<U>(outputChannel, this.routines.Concat(routines));
+            return new Pipeline<U>(outputChannel, CollectRoutines(routines));
         }
 
         public PipelineRunner Done(string name, Action<T> doneAction) {
             var routine = new Routine<T, T>(name, EmptyTransform, inputChannel, new TargetChannel<T>(doneAction));
-            return new PipelineRunner(this.routines.Concat(new[] { routine }));
+            return new PipelineRunner(CollectRoutines(routine));
+        }
+
+        IEnumerable<IRoutine> CollectRoutines(params IRoutine[] routines) {
+            return this.routines.Concat(routines);
         }
     }
 }

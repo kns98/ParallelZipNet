@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline.Channels {
     public class CompositeChannel<T> : IReadableChannel<T> {
@@ -10,6 +11,8 @@ namespace ParallelZipNet.Pipeline.Channels {
         public Channel<T>[] Channels => channels;
 
         public CompositeChannel(int degreeOfParallelism) {
+            Guard.NotNegative(degreeOfParallelism, nameof(degreeOfParallelism));
+
             channels = new Channel<T>[degreeOfParallelism];
             collections = new BlockingCollection<T>[degreeOfParallelism];
 
