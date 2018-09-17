@@ -17,6 +17,7 @@ namespace ParallelZipNet {
             DEST = "DEST",
             LOG_CHUNKS = "--log-chunks",
             LOG_JOBS = "--log-jobs",
+            USE_PIPELINE = "--use-pipeline",
             JOBCOUNT = "JOBCOUNT",
             JOBCOUNT_KEY = "--job-count",
             JOBCOUNT_VALUE = "JOBCOUNT_VALUE",
@@ -36,6 +37,7 @@ namespace ParallelZipNet {
                 .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
+                .Optional(USE_PIPELINE)
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
 
@@ -43,14 +45,9 @@ namespace ParallelZipNet {
                 .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
+                .Optional(USE_PIPELINE)
                 .Optional(LOG_CHUNKS)
-                .Optional(LOG_JOBS);
-
-            commands.Register(Compress2)
-                .Required("COMPRESS2", new[] { "compress2" }, new[] { SRC, DEST });
-
-            commands.Register(Decompress2)
-                .Required("DECOMPRESS2", new[] { "decompress2" }, new[] { SRC, DEST });                
+                .Optional(LOG_JOBS);              
         }
 
         static int Main(string[] args) {
@@ -99,36 +96,40 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsEnumerable(reader, writer, GetJobCount(options), GetChunkSize(options),
-                cancellationToken, GetLoggers(options)));
+            int jobCount = GetJobCount(options);
+            int chunkSize = GetChunkSize(options);
+            Loggers loggers = GetLoggers(options);            
+
+            Action<BinaryReader, BinaryWriter> processor;
+            if(UsePipeline(options))
+                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+            else
+                processor = (reader, writer) => Compressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+
+            ProcessFile(src, dest, processor);
         }
 
         static void Decompress(IEnumerable<Option> options) {
             Option decompress = options.First(x => x.Name == DECOMPRESS);
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
-            
-            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, GetJobCount(options), GetChunkSize(options),
-                cancellationToken, GetLoggers(options)));
+
+            int jobCount = GetJobCount(options);
+            int chunkSize = GetChunkSize(options);
+            Loggers loggers = GetLoggers(options);            
+
+            Action<BinaryReader, BinaryWriter> processor;
+            if(UsePipeline(options))
+                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+            else
+                processor = (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+
+            ProcessFile(src, dest, processor);
+        }      
+
+        static bool UsePipeline(IEnumerable<Option> options) {
+            return options.Any(x => x.Name == USE_PIPELINE);
         }
-
-        static void Compress2(IEnumerable<Option> options) {
-            Option compress2 = options.First(x => x.Name == "COMPRESS2");
-            string src = compress2.GetStringParam(SRC);
-            string dest = compress2.GetStringParam(DEST);
-
-            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsPipeline(reader, writer, GetJobCount(options), GetChunkSize(options),
-                cancellationToken, GetLoggers(options)));
-        }
-
-        static void Decompress2(IEnumerable<Option> options) {
-            Option decompress2 = options.First(x => x.Name == "DECOMPRESS2");
-            string src = decompress2.GetStringParam(SRC);
-            string dest = decompress2.GetStringParam(DEST);
-
-            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsPipeline(reader, writer, GetJobCount(options), GetChunkSize(options),
-                cancellationToken, GetLoggers(options)));
-        }        
 
         static int GetJobCount(IEnumerable<Option> options) {
             Option jobs = options.FirstOrDefault(x => x.Name == JOBCOUNT);            

@@ -18,6 +18,8 @@ namespace ParallelZipNet.Processor {
             Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
             Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
 
+            Console.WriteLine("Decompress as Enumerable");
+
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
             IJobLogger jobLogger = loggers?.JobLogger;
@@ -47,6 +49,8 @@ namespace ParallelZipNet.Processor {
             Guard.NotNull(writer, nameof(writer));
             Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
             Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
+
+            Console.WriteLine("Decompress as Pipeline");
 
             IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             Action<Chunk> write = ChunkTarget.WriteAction(writer, chunkSize);
