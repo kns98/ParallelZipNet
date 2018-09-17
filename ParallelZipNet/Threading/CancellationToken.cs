@@ -1,9 +1,12 @@
+using System.Threading;
+
 namespace ParallelZipNet.Threading {
     public class CancellationToken {
-        public bool IsCancelled { get; private set; }
+        volatile int state = 0;
+        public bool IsCancelled => state == 1;
         
         public void Cancel() {
-            IsCancelled = true;
+            Interlocked.Exchange(ref state, 1);
         }
     }
 }
