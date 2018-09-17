@@ -22,8 +22,7 @@ namespace ParallelZipNet.Processor {
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
             IJobLogger jobLogger = loggers?.JobLogger;            
 
-            int chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
-            writer.Write(chunkCount);
+            WriteHeader(reader, writer, chunkSize, out int chunkCount);
             
             var chunks = ChunkSource.Read(reader, chunkSize) 
                 .AsParallel(jobCount)
@@ -44,14 +43,18 @@ namespace ParallelZipNet.Processor {
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer) {
             int chunkSize = Constants.DEFAULT_CHUNK_SIZE;
 
-            int chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
-            writer.Write(chunkCount);
+            WriteHeader(reader, writer, chunkSize, out int chunkCount);
 
             Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadAction(reader, chunkSize))
                 .PipeMany("zip", ChunkConverter.Zip, Constants.DEFAULT_JOB_COUNT)
                 .Done("write", ChunkTarget.WriteActionCompressed(writer))
                 .RunSync();
+        }
+
+        static void WriteHeader(BinaryReader reader, BinaryWriter writer, int chunkSize, out int chunkCount) {
+            chunkCount = Convert.ToInt32(reader.BaseStream.Length / chunkSize) + 1;
+            writer.Write(chunkCount);
         }
     }
 }

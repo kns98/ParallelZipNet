@@ -22,7 +22,7 @@ namespace ParallelZipNet.Processor {
             IChunkLogger chunkLogger = loggers?.ChunkLogger;
             IJobLogger jobLogger = loggers?.JobLogger;
 
-            int chunkCount = reader.ReadInt32();
+            ReadHeader(reader, out int chunkCount);
 
             var chunks = ChunkSource.ReadCompressed(reader, chunkCount)
                 .AsParallel(jobCount)                
@@ -43,7 +43,7 @@ namespace ParallelZipNet.Processor {
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer) {                        
             int chunkSize = Constants.DEFAULT_CHUNK_SIZE;
 
-            int chunkCount = reader.ReadInt32();
+            ReadHeader(reader, out int chunkCount);
 
             Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadCompressedAction(reader, chunkCount))
@@ -51,5 +51,9 @@ namespace ParallelZipNet.Processor {
                 .Done("write", ChunkTarget.WriteAction(writer, chunkSize))
                 .RunSync();
         }  
+
+        static void ReadHeader(BinaryReader reader, out int chunkCount) {
+            chunkCount = reader.ReadInt32();
+        }
     }
 }
