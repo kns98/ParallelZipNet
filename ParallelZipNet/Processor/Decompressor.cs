@@ -43,12 +43,25 @@ namespace ParallelZipNet.Processor {
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
             Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {                        
 
+            Guard.NotNull(reader, nameof(reader));
+            Guard.NotNull(writer, nameof(writer));
+            Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
+            Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
+
+            IDefaultLogger defaultLogger = loggers?.DefaultLogger;
+            Action<Chunk> write = ChunkTarget.WriteAction(writer, chunkSize);
+            int index = 0;
+
             ReadHeader(reader, out int chunkCount);
 
             Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadCompressedAction(reader, chunkCount))
                 .PipeMany("zip", ChunkConverter.Unzip, jobCount)
-                .Done("write", ChunkTarget.WriteAction(writer, chunkSize))
+                .Done("write", (Chunk chunk) => {
+                    write(chunk);
+
+                    defaultLogger?.LogChunksProcessed(++index, chunkCount);
+                })
                 .RunSync();
         }  
 

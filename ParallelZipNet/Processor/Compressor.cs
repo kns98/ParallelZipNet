@@ -44,24 +44,24 @@ namespace ParallelZipNet.Processor {
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
             Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {
 
-            WriteHeader(reader, writer, chunkSize, out int chunkCount);
+            Guard.NotNull(reader, nameof(reader));
+            Guard.NotNull(writer, nameof(writer));
+            Guard.NotZeroOrNegative(jobCount, nameof(jobCount));
+            Guard.NotZeroOrNegative(chunkSize, nameof(chunkSize));
 
-            SourceAction<Chunk> read = ChunkSource.ReadAction(reader, chunkSize);
+            IDefaultLogger defaultLogger = loggers?.DefaultLogger;
             Action<Chunk> write = ChunkTarget.WriteActionCompressed(writer);
+            int index = 0; 
 
+            WriteHeader(reader, writer, chunkSize, out int chunkCount);
+            
             Pipeline<Chunk>
-                .FromSource("read", (out Chunk chunk) => {                    
-                    bool result = read(out chunk);
-                    Console.WriteLine($"read {chunk?.Index}");
-                    return result;
-                })
-                .PipeMany("zip", (Chunk chunk) => {
-                    Console.WriteLine($"zip {chunk?.Index}");
-                    return ChunkConverter.Zip(chunk);
-                }, jobCount)
+                .FromSource("read", ChunkSource.ReadAction(reader, chunkSize))
+                .PipeMany("zip", ChunkConverter.Zip, jobCount)
                 .Done("write", (Chunk chunk) => {
-                    Console.WriteLine($"write {chunk?.Index}");
                     write(chunk);
+
+                    defaultLogger?.LogChunksProcessed(++index, chunkCount);                    
                 })
                 .RunSync(cancellationToken);
         }

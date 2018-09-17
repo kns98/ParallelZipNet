@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,7 +23,7 @@ namespace ParallelZipNet.Pipeline {
         }
 
         public void RunSync(CancellationToken cancellationToken = null) {
-            RunAsync(cancellationToken).GetAwaiter().GetResult();
+            RunAsync(cancellationToken).Wait();
         }
     }
 }
