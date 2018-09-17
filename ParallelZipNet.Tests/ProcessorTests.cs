@@ -31,12 +31,12 @@ namespace ParallelZipNet.Tests {
             using(var tempWriter = new BinaryWriter(tempStream))            
             using(var tempReader = new BinaryReader(tempStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Compressor.Run(srcReader, tempWriter, 1, chunkSize, null, loggersCompress);
+                Compressor.RunAsEnumerable(srcReader, tempWriter, 1, chunkSize, null, loggersCompress);
 
                 tempWriter.Flush();
                 tempWriter.Seek(0, SeekOrigin.Begin);
 
-                Decompressor.Run(tempReader, destWriter, 1, chunkSize, null, loggersDecompress);
+                Decompressor.RunAsEnumerable(tempReader, destWriter, 1, chunkSize, null, loggersDecompress);
 
                 return destStream.ToArray();
             }            
@@ -54,7 +54,7 @@ namespace ParallelZipNet.Tests {
 
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Action act = () => Decompressor.Run(srcReader, destWriter, 1, chunkSize);
+                Action act = () => Decompressor.RunAsEnumerable(srcReader, destWriter, 1, chunkSize);
                 act.Should().Throw<InvalidDataException>();                
             }
         }
@@ -70,7 +70,7 @@ namespace ParallelZipNet.Tests {
 
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Action act = () => Compressor.Run(srcReader, destWriter, 1, chunkSize, null, new Loggers { ChunkLogger = fakeLogger });
+                Action act = () => Compressor.RunAsEnumerable(srcReader, destWriter, 1, chunkSize, null, new Loggers { ChunkLogger = fakeLogger });
                 act.Should().Throw<InvalidOperationException>();
             }
         }

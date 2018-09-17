@@ -2,8 +2,8 @@ using System.IO;
 using System.IO.Compression;
 
 namespace ParallelZipNet.ChunkLayer {
-    public static class ChunkZipper {
-        public static Chunk ZipChunk(Chunk chunk) {
+    public static class ChunkConverter {
+        public static Chunk Zip(Chunk chunk) {
             MemoryStream compressed;
             using(compressed = new MemoryStream()) {
                 using(var gzip = new GZipStream(compressed, CompressionMode.Compress)) {
@@ -14,7 +14,7 @@ namespace ParallelZipNet.ChunkLayer {
             return new Chunk(chunk.Index, compressed.ToArray());            
         }
 
-        public static Chunk UnzipChunk(Chunk chunk) {
+        public static Chunk Unzip(Chunk chunk) {
             MemoryStream compressed;
             MemoryStream decompressed;
             using(compressed = new MemoryStream(chunk.Data)) {

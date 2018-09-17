@@ -6,7 +6,6 @@ using ParallelZipNet.Processor;
 using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
-using ParallelZipNet.Processor2;
 
 namespace ParallelZipNet {
     class Program {
@@ -100,7 +99,7 @@ namespace ParallelZipNet {
             string src = compress.GetStringParam(SRC);
             string dest = compress.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.Run(reader, writer, GetJobCount(options), GetChunkSize(options),
+            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsEnumerable(reader, writer, GetJobCount(options), GetChunkSize(options),
                 cancellationToken, GetLoggers(options)));
         }
 
@@ -109,7 +108,7 @@ namespace ParallelZipNet {
             string src = decompress.GetStringParam(SRC);
             string dest = decompress.GetStringParam(DEST);
             
-            ProcessFile(src, dest, (reader, writer) => Decompressor.Run(reader, writer, GetJobCount(options), GetChunkSize(options),
+            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, GetJobCount(options), GetChunkSize(options),
                 cancellationToken, GetLoggers(options)));
         }
 
@@ -118,7 +117,7 @@ namespace ParallelZipNet {
             string src = compress2.GetStringParam(SRC);
             string dest = compress2.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor2.Run(reader, writer));
+            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsPipeline(reader, writer));
         }
 
         static void Decompress2(IEnumerable<Option> options) {
@@ -126,7 +125,7 @@ namespace ParallelZipNet {
             string src = decompress2.GetStringParam(SRC);
             string dest = decompress2.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Decompressor2.Run(reader, writer));
+            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsPipeline(reader, writer));
         }        
 
         static int GetJobCount(IEnumerable<Option> options) {
