@@ -31,14 +31,16 @@ namespace ParallelZipNet.Pipeline {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
                 
-            return Task.Run(() => {                
+            return Task.Factory.StartNew(() => {                
                 while(inputChannel.Read(out T data)) {
-                    if(cancellationToken.IsCancelled)
+                    if(cancellationToken.IsCancelled) {
+                        Console.WriteLine($"CANCELLED {name}");
                         break;
+                    }
                     outputChannel.Write(transform(data));                    
                 }
                 outputChannel.Finish();
-            });
+            }, TaskCreationOptions.LongRunning);
         }
     }
 }

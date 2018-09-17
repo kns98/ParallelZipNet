@@ -7,6 +7,7 @@ using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
 using ParallelZipNet.Pipeline;
+using ParallelZipNet.Pipeline.Channels;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
@@ -40,16 +41,29 @@ namespace ParallelZipNet.Processor {
             }
         }
 
-        public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer) {
-            int chunkSize = Constants.DEFAULT_CHUNK_SIZE;
+        public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
+            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {
 
             WriteHeader(reader, writer, chunkSize, out int chunkCount);
 
+            SourceAction<Chunk> read = ChunkSource.ReadAction(reader, chunkSize);
+            Action<Chunk> write = ChunkTarget.WriteActionCompressed(writer);
+
             Pipeline<Chunk>
-                .FromSource("read", ChunkSource.ReadAction(reader, chunkSize))
-                .PipeMany("zip", ChunkConverter.Zip, Constants.DEFAULT_JOB_COUNT)
-                .Done("write", ChunkTarget.WriteActionCompressed(writer))
-                .RunSync();
+                .FromSource("read", (out Chunk chunk) => {                    
+                    bool result = read(out chunk);
+                    Console.WriteLine($"read {chunk?.Index}");
+                    return result;
+                })
+                .PipeMany("zip", (Chunk chunk) => {
+                    Console.WriteLine($"zip {chunk?.Index}");
+                    return ChunkConverter.Zip(chunk);
+                }, jobCount)
+                .Done("write", (Chunk chunk) => {
+                    Console.WriteLine($"write {chunk?.Index}");
+                    write(chunk);
+                })
+                .RunSync(cancellationToken);
         }
 
         static void WriteHeader(BinaryReader reader, BinaryWriter writer, int chunkSize, out int chunkCount) {

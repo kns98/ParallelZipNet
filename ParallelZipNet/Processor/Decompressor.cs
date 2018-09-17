@@ -40,14 +40,14 @@ namespace ParallelZipNet.Processor {
             }
         }
 
-        public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer) {                        
-            int chunkSize = Constants.DEFAULT_CHUNK_SIZE;
+        public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
+            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {                        
 
             ReadHeader(reader, out int chunkCount);
 
             Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadCompressedAction(reader, chunkCount))
-                .PipeMany("zip", ChunkConverter.Unzip, Constants.DEFAULT_JOB_COUNT)
+                .PipeMany("zip", ChunkConverter.Unzip, jobCount)
                 .Done("write", ChunkTarget.WriteAction(writer, chunkSize))
                 .RunSync();
         }  

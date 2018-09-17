@@ -117,7 +117,8 @@ namespace ParallelZipNet {
             string src = compress2.GetStringParam(SRC);
             string dest = compress2.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsPipeline(reader, writer));
+            ProcessFile(src, dest, (reader, writer) => Compressor.RunAsPipeline(reader, writer, GetJobCount(options), GetChunkSize(options),
+                cancellationToken, GetLoggers(options)));
         }
 
         static void Decompress2(IEnumerable<Option> options) {
@@ -125,7 +126,8 @@ namespace ParallelZipNet {
             string src = decompress2.GetStringParam(SRC);
             string dest = decompress2.GetStringParam(DEST);
 
-            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsPipeline(reader, writer));
+            ProcessFile(src, dest, (reader, writer) => Decompressor.RunAsPipeline(reader, writer, GetJobCount(options), GetChunkSize(options),
+                cancellationToken, GetLoggers(options)));
         }        
 
         static int GetJobCount(IEnumerable<Option> options) {
