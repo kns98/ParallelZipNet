@@ -28,9 +28,8 @@ namespace ParallelZipNet.Pipeline {
         }
 
         public Task Run(CancellationToken cancellationToken) {
-            if(cancellationToken == null)
-                cancellationToken = new CancellationToken();
-                
+            Guard.NotNull(cancellationToken, nameof(cancellationToken));
+
             return Task.Factory.StartNew(() => {
                 try {
                     while(inputChannel.Read(out T data)) {
