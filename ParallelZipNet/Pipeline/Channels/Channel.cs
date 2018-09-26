@@ -30,7 +30,8 @@ namespace ParallelZipNet.Pipeline.Channels {
                 }
                 
                 result = queue.Count > 0;
-                data = queue.Dequeue();                
+                if(result)
+                    data = queue.Dequeue();                
             }
 
             return result;
