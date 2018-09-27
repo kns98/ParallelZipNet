@@ -66,7 +66,7 @@ namespace ParallelZipNet.Processor {
 
                     defaultLogger?.LogChunksProcessed(++index, chunkCount);
                 })
-                .RunSync();
+                .RunSync(cancellationToken);
         }  
 
         static void ReadHeader(BinaryReader reader, out int chunkCount) {
