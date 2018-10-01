@@ -14,6 +14,7 @@ namespace ParallelZipNet.Threading {
         readonly ReaderWriterLock resultsLock = new ReaderWriterLock();
 
         public Exception Error { get; private set; }
+        
         public bool IsFinished { 
             get { 
                 if(thread.IsAlive)

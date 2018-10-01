@@ -11,7 +11,7 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/ParallelZipNet/bin/Debug/netcoreapp2.0/ParallelZipNet.dll",
-            "args": ["compress", "./Sandbox/video.MP4", "./Sandbox/video.gzx", "--job-count", "2", "--use-pipeline"],
+            "args": ["compress", "./Sandbox/andes.jpg", "./Sandbox/andes.gzx", "--job-count", "2", "--use-pipeline"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "integratedTerminal",

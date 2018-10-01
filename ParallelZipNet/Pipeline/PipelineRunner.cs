@@ -6,24 +6,26 @@ using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline {
-    public class PipelineRunner {
-         readonly IEnumerable<IRoutine> routines;
+    public class PipelineRunner : IDisposable {
+        readonly IEnumerable<IRoutine> routines;
 
-         public PipelineRunner(IEnumerable<IRoutine> routines) {
-             Guard.NotNull(routines, nameof(routines));
+        public PipelineRunner(IEnumerable<IRoutine> routines) {
+            Guard.NotNull(routines, nameof(routines));
              
-             this.routines = routines;
-         }
+            this.routines = routines;
+        }
 
-        public Task RunAsync(CancellationToken cancellationToken = null) {
+        public void Run(CancellationToken cancellationToken = null) {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
 
-            return Task.WhenAll(routines.Select(routine => routine.Run(cancellationToken)));
+            foreach(var routine in routines)
+                routine.Run(cancellationToken);
         }
 
-        public void RunSync(CancellationToken cancellationToken = null) {
-            RunAsync(cancellationToken).Wait();
+        public void Dispose() {
+            foreach(var routine in routines)
+                routine.Dispose();            
         }
     }
 }

@@ -1,12 +1,15 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ParallelZipNet.Pipeline.Channels;
 using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 
+using CancellationToken = ParallelZipNet.Threading.CancellationToken;
+
 namespace ParallelZipNet.Pipeline {
-    public interface IRoutine {
-        Task Run(CancellationToken cancellationToken = null);
+    public interface IRoutine : IDisposable {
+        void Run(CancellationToken cancellationToken = null);
     }
 
     public class Routine<T, U> : IRoutine {
@@ -14,6 +17,10 @@ namespace ParallelZipNet.Pipeline {
         readonly Func<T, U> transform;
         readonly IReadableChannel<T> inputChannel;
         readonly IWritableChannel<U> outputChannel;
+
+        Thread thread;
+
+        public Exception Error { get; private set; }
 
         public Routine(string name, Func<T, U> transform, IReadableChannel<T> inputChannel, IWritableChannel<U> outputChannel) {
             Guard.NotNullOrWhiteSpace(name, nameof(name));
@@ -27,10 +34,13 @@ namespace ParallelZipNet.Pipeline {
             this.outputChannel = outputChannel;
         }
 
-        public Task Run(CancellationToken cancellationToken) {
+        public void Run(CancellationToken cancellationToken) {
             Guard.NotNull(cancellationToken, nameof(cancellationToken));
 
-            return Task.Factory.StartNew(() => {
+            if(thread != null)
+                throw new InvalidOperationException();
+
+            thread = new Thread(() => {
                 try {
                     while(inputChannel.Read(out T data)) {
                         if(cancellationToken.IsCancelled)
@@ -38,10 +48,21 @@ namespace ParallelZipNet.Pipeline {
                         outputChannel.Write(transform(data));                    
                     }
                 }
+                catch(Exception e) {
+                    Error = e;
+                }
                 finally {
                     outputChannel.Finish();
                 }
-            }, TaskCreationOptions.LongRunning);
+            }) {
+                Name = name,
+                IsBackground = true
+            };
+            thread.Start();
+        }
+
+        public void Dispose() {
+            thread.Join();
         }
     }
 }
