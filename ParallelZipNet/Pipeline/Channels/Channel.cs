@@ -4,13 +4,16 @@ using System.Collections.Generic;
 using System.Threading;
 
 namespace ParallelZipNet.Pipeline.Channels {
-    public enum TryReadResult { Value, NoValue, Finished }
-
     public class Channel<T> : IReadableChannel<T>, IWritableChannel<T> {
         readonly Queue<T> queue = new Queue<T>();
         readonly object locker = new object();
+        readonly string name;
 
         bool finished = false;
+
+        public Channel(string name) {
+            this.name = name;
+        }
 
         public bool Read(out T data) {
             data = default(T);
@@ -18,29 +21,13 @@ namespace ParallelZipNet.Pipeline.Channels {
             lock(locker) {
                 while(queue.Count == 0 && !finished)
                     Monitor.Wait(locker);
-                
+              
                 if(queue.Count > 0) {
                     data = queue.Dequeue();
                     return true;
                 }
 
                 return false;                
-            }
-        }
-
-        public TryReadResult TryRead(out T data) {
-            data = default(T);
-
-            lock(locker) {                
-                if(queue.Count > 0) {
-                    data = queue.Dequeue();
-                    return TryReadResult.Value;
-                }
-
-                if(finished)
-                    return TryReadResult.Finished;
-
-                return TryReadResult.NoValue;
             }
         }
 
