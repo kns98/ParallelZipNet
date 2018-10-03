@@ -6,7 +6,7 @@ using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline {
-    public class PipelineRunner : IDisposable {
+    public class PipelineRunner {
         readonly IEnumerable<IRoutine> routines;
 
         public PipelineRunner(IEnumerable<IRoutine> routines) {
@@ -21,11 +21,17 @@ namespace ParallelZipNet.Pipeline {
 
             foreach(var routine in routines)
                 routine.Run(cancellationToken);
-        }
 
-        public void Dispose() {
             foreach(var routine in routines)
-                routine.Dispose();            
+                routine.Wait();
+
+            var errors = routines
+                .Where(x => x.Error != null)
+                .Select(x => x.Error)
+                .ToArray();
+
+            if(errors.Length > 0)
+                throw new AggregateException(errors);
         }
     }
 }

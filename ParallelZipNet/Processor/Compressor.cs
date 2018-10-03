@@ -59,16 +59,15 @@ namespace ParallelZipNet.Processor {
 
             WriteHeader(reader, writer, chunkSize, out int chunkCount);
             
-            using(var runner = Pipeline<Chunk>
+            Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadAction(reader, chunkSize))
                 .PipeMany("zip", ChunkConverter.Zip, jobCount)
                 .Done("write", (Chunk chunk) => {
                     write(chunk);
 
                     defaultLogger?.LogChunksProcessed(++index, chunkCount);                    
-                })) {
-                    runner.Run(cancellationToken);
-                }
+                })
+                .Run(cancellationToken);
         }
 
         static void WriteHeader(BinaryReader reader, BinaryWriter writer, int chunkSize, out int chunkCount) {

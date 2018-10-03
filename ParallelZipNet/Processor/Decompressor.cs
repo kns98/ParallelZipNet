@@ -58,16 +58,15 @@ namespace ParallelZipNet.Processor {
 
             ReadHeader(reader, out int chunkCount);
 
-            using(var runner = Pipeline<Chunk>
+            Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadCompressedAction(reader, chunkCount))
                 .PipeMany("zip", ChunkConverter.Unzip, jobCount)
                 .Done("write", (Chunk chunk) => {
                     write(chunk);
 
                     defaultLogger?.LogChunksProcessed(++index, chunkCount);
-                })) {
-                    runner.Run(cancellationToken);
-                }
+                })
+                .Run(cancellationToken);
         }  
 
         static void ReadHeader(BinaryReader reader, out int chunkCount) {
