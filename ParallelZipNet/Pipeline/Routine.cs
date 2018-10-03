@@ -9,10 +9,8 @@ using CancellationToken = ParallelZipNet.Threading.CancellationToken;
 
 namespace ParallelZipNet.Pipeline {
     public interface IRoutine {
-        Exception Error { get; }
-        
         void Run(CancellationToken cancellationToken = null);
-        void Wait();
+        Exception Wait();
     }
 
     public class Routine<T, U> : IRoutine {
@@ -22,8 +20,7 @@ namespace ParallelZipNet.Pipeline {
         readonly IWritableChannel<U> outputChannel;
 
         Thread thread;
-
-        public Exception Error { get; private set; }
+        Exception error;
 
         public Routine(string name, Func<T, U> transform, IReadableChannel<T> inputChannel, IWritableChannel<U> outputChannel) {
             Guard.NotNullOrWhiteSpace(name, nameof(name));
@@ -51,8 +48,8 @@ namespace ParallelZipNet.Pipeline {
                         outputChannel.Write(transform(data));                    
                     }
                 }
-                catch(Exception e) {
-                    Error = e;
+                catch(Exception error) {
+                    this.error = error;
                     cancellationToken.Cancel();
                 }
                 finally {
@@ -65,8 +62,9 @@ namespace ParallelZipNet.Pipeline {
             thread.Start();
         }
 
-        public void Wait() {
+        public Exception Wait() {
             thread.Join();
+            return error;
         }
     }
 }

@@ -22,15 +22,12 @@ namespace ParallelZipNet.Pipeline {
             foreach(var routine in routines)
                 routine.Run(cancellationToken);
 
-            foreach(var routine in routines)
-                routine.Wait();
-
             var errors = routines
-                .Where(x => x.Error != null)
-                .Select(x => x.Error)
-                .ToArray();
+                .Select(routine => routine.Wait())                
+                .Where(error => error != null)
+                .ToList();
 
-            if(errors.Length > 0)
+            if(errors.Count > 0)
                 throw new AggregateException(errors);
         }
     }
