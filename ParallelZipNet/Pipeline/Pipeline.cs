@@ -41,8 +41,8 @@ namespace ParallelZipNet.Pipeline {
             return new Pipeline<U>(outputChannel, CollectRoutines(routines));
         } 
 
-        public PipelineRunner Done(string name, Action<T> doneAction) {
-            var routine = new Routine<T, T>(name, EmptyTransform, inputChannel, new TargetChannel<T>(doneAction));
+        public PipelineRunner ToTarget(string name, Action<T> targetAction) {
+            var routine = new Routine<T, T>(name, EmptyTransform, inputChannel, new TargetChannel<T>(targetAction));
             return new PipelineRunner(CollectRoutines(routine));
         }
 

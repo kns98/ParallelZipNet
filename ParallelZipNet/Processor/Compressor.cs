@@ -62,7 +62,7 @@ namespace ParallelZipNet.Processor {
             Pipeline<Chunk>
                 .FromSource("read", ChunkSource.ReadAction(reader, chunkSize))
                 .PipeMany("zip", ChunkConverter.Zip, jobCount)
-                .Done("write", (Chunk chunk) => {
+                .ToTarget("write", (Chunk chunk) => {
                     write(chunk);
 
                     defaultLogger?.LogChunksProcessed(++index, chunkCount);                    
