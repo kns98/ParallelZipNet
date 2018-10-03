@@ -9,17 +9,18 @@ namespace ParallelZipNet.Pipeline.Channels {
         readonly object locker = new object();
         readonly string name;
 
-        bool finished = false;
+        int writerCount;
 
-        public Channel(string name) {
+        public Channel(string name, int writerCount) {
             this.name = name;
+            this.writerCount = writerCount;
         }
 
         public bool Read(out T data) {
             data = default(T);
 
             lock(locker) {
-                while(queue.Count == 0 && !finished)
+                while(queue.Count == 0 && writerCount > 0)
                     Monitor.Wait(locker);
               
                 if(queue.Count > 0) {
@@ -33,17 +34,16 @@ namespace ParallelZipNet.Pipeline.Channels {
 
         public void Write(T data) {
             lock(locker) {
-                queue.Enqueue(data);
-                
+                queue.Enqueue(data);                
                 Monitor.Pulse(locker);
             }
         }
 
         public void Finish() {
             lock(locker) {
-                finished = true;
-
-                Monitor.PulseAll(locker);
+                writerCount--;
+                if(writerCount == 0)
+                    Monitor.PulseAll(locker);
             }
         }
     }

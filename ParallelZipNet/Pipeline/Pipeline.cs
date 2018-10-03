@@ -27,13 +27,13 @@ namespace ParallelZipNet.Pipeline {
         }
 
         public Pipeline<U> Pipe<U>(string name, Func<T, U> transform) {            
-            var outputChannel = new Channel<U>(name);
+            var outputChannel = new Channel<U>(name, 1);
             var routine = new Routine<T, U>(name, transform, inputChannel, outputChannel);            
             return new Pipeline<U>(outputChannel, CollectRoutines(routine));
         }
 
         public Pipeline<U> PipeMany<U>(string name, Func<T, U> transform, int degreeOfParallelism) {
-            var outputChannel = new Channel<U>(name);
+            var outputChannel = new Channel<U>(name, degreeOfParallelism);
             var routines = Enumerable.Range(1, degreeOfParallelism)
                 .Select(index => new Routine<T, U>($"{name} {index}", transform, inputChannel, outputChannel))
                 .ToArray();
