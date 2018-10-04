@@ -23,7 +23,10 @@ namespace ParallelZipNet {
             JOBCOUNT_VALUE = "JOBCOUNT_VALUE",
             CHUNKSIZE = "CHUNKSIZE",
             CHUNKSIZE_KEY = "--chunk-size",
-            CHUNKSIZE_VALUE = "CHUNKSIZE_VALUE";        
+            CHUNKSIZE_VALUE = "CHUNKSIZE_VALUE",
+            PROFILE_PIPELINE = "PROFILE_PIPELINE",
+            PROFILE_PIPELINE_KEY = "--profile-pipeline",
+            PROFILE_PIPELINE_VALUE = "PROFILE_PIPELINE_VALUE";
 
         static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
 
@@ -38,6 +41,7 @@ namespace ParallelZipNet {
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
                 .Optional(USE_PIPELINE)
+                .Optional(PROFILE_PIPELINE, new[] { PROFILE_PIPELINE_KEY }, new[] { PROFILE_PIPELINE_VALUE })
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);
 
@@ -46,6 +50,7 @@ namespace ParallelZipNet {
                 .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
                 .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
                 .Optional(USE_PIPELINE)
+                .Optional(PROFILE_PIPELINE, new[] { PROFILE_PIPELINE_KEY }, new[] { PROFILE_PIPELINE_VALUE })
                 .Optional(LOG_CHUNKS)
                 .Optional(LOG_JOBS);              
         }
@@ -101,8 +106,10 @@ namespace ParallelZipNet {
             Loggers loggers = GetLoggers(options);            
 
             Action<BinaryReader, BinaryWriter> processor;
-            if(UsePipeline(options))
-                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+            if(UsePipeline(options)) {
+                ProfilePipeline profile = GetPipelineProfile(options);
+                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profile);
+            }
             else
                 processor = (reader, writer) => Compressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
 
@@ -119,8 +126,10 @@ namespace ParallelZipNet {
             Loggers loggers = GetLoggers(options);            
 
             Action<BinaryReader, BinaryWriter> processor;
-            if(UsePipeline(options))
-                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+            if(UsePipeline(options)) {
+                ProfilePipeline profile = GetPipelineProfile(options);
+                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profile);
+            }
             else
                 processor = (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
 
@@ -166,6 +175,13 @@ namespace ParallelZipNet {
             return loggers;
         }
 
+        static ProfilePipeline GetPipelineProfile(IEnumerable<Option> options) {
+            Option profile = options.FirstOrDefault(x => x.Name == PROFILE_PIPELINE);
+            return profile != null ?
+                    profile.GetFlags<ProfilePipeline>(PROFILE_PIPELINE_VALUE) :
+                    ProfilePipeline.None;
+        }
+
         static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {
             var srcInfo = new FileInfo(src);
             if(!srcInfo.Exists)
@@ -203,11 +219,12 @@ Decompress:
     (decompress | d) <src> <dest> [<Options>]    
 
 Options:
-    --job-count <number>    a number of concurrent threads
-    --chunk-size <number>   a size of chunk processed at once
-    --log-chunks            log chunks details to console
-    --log-jobs              log job details to console
-    --use-pipeline          apply the pipeline approach
+    --job-count <number>                                a number of concurrent threads
+    --chunk-size <number>                               a size of chunk processed at once
+    --log-chunks                                        log chunks details to console
+    --log-jobs                                          log job details to console
+    --use-pipeline                                      apply the pipeline approach
+    --profile-pipeline read_write_transform_channel     profile a set of pipeline actions (considered as flags)
 
 Help:
     --help, -h, -?");

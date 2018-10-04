@@ -15,12 +15,12 @@ namespace ParallelZipNet.Pipeline {
             this.routines = routines;
         }
 
-        public void Run(CancellationToken cancellationToken = null) {
+        public void Run(CancellationToken cancellationToken, ProfilePipeline profile) {
             if(cancellationToken == null)
                 cancellationToken = new CancellationToken();
 
             foreach(var routine in routines)
-                routine.Run(cancellationToken);
+                routine.Run(cancellationToken, profile);
 
             var errors = routines
                 .Select(routine => routine.Wait())                

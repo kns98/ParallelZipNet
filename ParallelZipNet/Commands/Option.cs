@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Commands {
@@ -26,6 +27,13 @@ namespace ParallelZipNet.Commands {
             Guard.NotNullOrWhiteSpace(key, nameof(key));
 
             return parameters[key];
+        }
+
+        public T GetFlags<T>(string key) {
+            string[] enumNames = parameters[key].Split("_");
+            string enumString = string.Join(",", enumNames);
+
+            return (T)Enum.Parse(typeof(T), enumString, ignoreCase: true);
         }
 
         public int GetIntegerParam(string key, int minConstraint = int.MinValue, int maxContstaint = int.MaxValue) {

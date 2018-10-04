@@ -43,7 +43,7 @@ namespace ParallelZipNet.Processor {
         }
 
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
-            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {                        
+            Threading.CancellationToken cancellationToken = null, Loggers loggers = null, ProfilePipeline profile = ProfilePipeline.None) {                        
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
@@ -64,9 +64,10 @@ namespace ParallelZipNet.Processor {
                 .ToTarget("write", (Chunk chunk) => {
                     write(chunk);
 
-                    defaultLogger?.LogChunksProcessed(++index, chunkCount);
+                    if(profile == ProfilePipeline.None)
+                        defaultLogger?.LogChunksProcessed(++index, chunkCount);
                 })
-                .Run(cancellationToken);
+                .Run(cancellationToken, profile);
         }  
 
         static void ReadHeader(BinaryReader reader, out int chunkCount) {
