@@ -35,7 +35,7 @@ namespace ParallelZipNet.Processor {
 
             int index = 0;
             foreach(var chunk in chunks) {
-                ChunkTarget.Write(chunk, writer, chunkSize);
+                chunk.Write(writer, chunkSize);
 
                 chunkLogger?.LogChunk("Write", chunk);
                 defaultLogger?.LogChunksProcessed(++index, chunkCount);

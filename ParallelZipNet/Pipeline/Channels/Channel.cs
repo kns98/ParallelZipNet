@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline.Channels {
     public class Channel<T> : IReadableChannel<T>, IWritableChannel<T> {
@@ -12,6 +13,8 @@ namespace ParallelZipNet.Pipeline.Channels {
         int writerCount;
 
         public Channel(string name, int writerCount) {
+            Guard.NotZeroOrNegative(writerCount, nameof(writerCount));
+
             this.name = name;
             this.writerCount = writerCount;
         }

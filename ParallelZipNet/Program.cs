@@ -207,6 +207,7 @@ Options:
     --chunk-size <number>   a size of chunk processed at once
     --log-chunks            log chunks details to console
     --log-jobs              log job details to console
+    --use-pipeline          apply the pipeline approach
 
 Help:
     --help, -h, -?");
