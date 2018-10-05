@@ -107,8 +107,9 @@ namespace ParallelZipNet {
 
             Action<BinaryReader, BinaryWriter> processor;
             if(UsePipeline(options)) {
-                ProfilePipeline profile = GetPipelineProfile(options);
-                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profile);
+                ProfilingType profilingType = GetProfilingType(options);
+                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
+                    profilingType);
             }
             else
                 processor = (reader, writer) => Compressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
@@ -127,8 +128,9 @@ namespace ParallelZipNet {
 
             Action<BinaryReader, BinaryWriter> processor;
             if(UsePipeline(options)) {
-                ProfilePipeline profile = GetPipelineProfile(options);
-                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profile);
+                ProfilingType profilingType = GetProfilingType(options);
+                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
+                    profilingType);
             }
             else
                 processor = (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
@@ -175,11 +177,11 @@ namespace ParallelZipNet {
             return loggers;
         }
 
-        static ProfilePipeline GetPipelineProfile(IEnumerable<Option> options) {
-            Option profile = options.FirstOrDefault(x => x.Name == PROFILE_PIPELINE);
-            return profile != null ?
-                    profile.GetFlags<ProfilePipeline>(PROFILE_PIPELINE_VALUE) :
-                    ProfilePipeline.None;
+        static ProfilingType GetProfilingType(IEnumerable<Option> options) {
+            Option profiling = options.FirstOrDefault(x => x.Name == PROFILE_PIPELINE);
+            return profiling != null ?
+                    profiling.GetFlags<ProfilingType>(PROFILE_PIPELINE_VALUE) :
+                    ProfilingType.None;
         }
 
         static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {

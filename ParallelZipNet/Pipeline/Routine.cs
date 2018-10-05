@@ -10,7 +10,7 @@ using CancellationToken = ParallelZipNet.Threading.CancellationToken;
 
 namespace ParallelZipNet.Pipeline {
     public interface IRoutine {
-        void Run(CancellationToken cancellationToken, ProfilePipeline profile);
+        void Run(CancellationToken cancellationToken, ProfilingType profilingType);
         Exception Wait();
     }
 
@@ -35,7 +35,7 @@ namespace ParallelZipNet.Pipeline {
             this.outputChannel = outputChannel;
         }
 
-        public void Run(CancellationToken cancellationToken, ProfilePipeline profile) {
+        public void Run(CancellationToken cancellationToken, ProfilingType profilingType) {
             Guard.NotNull(cancellationToken, nameof(cancellationToken));
 
             if(thread != null)
@@ -43,10 +43,11 @@ namespace ParallelZipNet.Pipeline {
 
             thread = new Thread(() => {
                 try {
-                    if(profile == ProfilePipeline.None)
-                        Do(cancellationToken);                        
-                    else
-                        DoAndProfile(cancellationToken, profile);                        
+                    Profiler profiler =
+                        profilingType != ProfilingType.None ?
+                        new Profiler(name, profilingType) :
+                        null;
+                    Do(cancellationToken, profiler);
                 }
                 catch(Exception error) {
                     this.error = error;
@@ -66,55 +67,40 @@ namespace ParallelZipNet.Pipeline {
             thread.Join();
             return error;
         }
-
-        void Do(CancellationToken cancellationToken) {
-            while(inputChannel.Read(out T data)) {                        
-                if(cancellationToken.IsCancelled)
-                    break;                        
-                outputChannel.Write(transform(data));                    
-            }                        
-        }
-        
-        void DoAndProfile(CancellationToken cancellationToken, ProfilePipeline profile) {
-            bool showReadTime = profile.HasFlag(ProfilePipeline.Read);
-            bool showWriteTime = profile.HasFlag(ProfilePipeline.Write);
-            bool showTransformTime = profile.HasFlag(ProfilePipeline.Transform);
-
-            Stopwatch watch = new Stopwatch();
-
-            void BeginWatch(bool force) {
-                if(force) {
-                    watch.Reset();
-                    watch.Start();
-                }
-            }
-
-            void EndWatch(bool force, string operation) {
-                if(force) {
-                    watch.Stop();            
-                    double timeMicro = (double)watch.ElapsedTicks / Stopwatch.Frequency * 1000 * 1000;
-                    Console.WriteLine($"{operation} - {name} : {timeMicro}");
-                }
-            }            
-
+                
+        void Do(CancellationToken cancellationToken, Profiler profiler) {
             bool Read(out T data) {                
-                BeginWatch(showReadTime);
-                bool finished = inputChannel.Read(out data);
-                EndWatch(showReadTime, "READ");
+                bool finished = true;
+                profiler?.BeginWatch(ProfilingType.Read);
+                try {
+                    finished = inputChannel.Read(out data);
+                }
+                finally {
+                    profiler?.EndWatch(ProfilingType.Read);
+                }
                 return finished;
             }
 
             U Transform(T data) {
-                BeginWatch(showTransformTime);
-                U result = transform(data);
-                EndWatch(showTransformTime, "TRANS");
+                U result = default(U);
+                profiler?.BeginWatch(ProfilingType.Transform);
+                try {
+                    result = transform(data);
+                }
+                finally {
+                    profiler?.EndWatch(ProfilingType.Transform);
+                }
                 return result;
             }
 
             void Write(U data) {
-                BeginWatch(showWriteTime);
-                outputChannel.Write(data);
-                EndWatch(showWriteTime, "WRITE");
+                profiler?.BeginWatch(ProfilingType.Write);
+                try {
+                    outputChannel.Write(data);
+                }
+                finally {
+                    profiler?.EndWatch(ProfilingType.Write);
+                }
             }            
 
             while(Read(out T data)) {                        
