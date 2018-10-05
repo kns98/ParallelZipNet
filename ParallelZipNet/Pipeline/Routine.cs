@@ -73,7 +73,7 @@ namespace ParallelZipNet.Pipeline {
                 bool finished = true;
                 profiler?.BeginWatch(ProfilingType.Read);
                 try {
-                    finished = inputChannel.Read(out data);
+                    finished = inputChannel.Read(out data, profiler);
                 }
                 finally {
                     profiler?.EndWatch(ProfilingType.Read);

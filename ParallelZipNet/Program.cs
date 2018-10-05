@@ -179,9 +179,14 @@ namespace ParallelZipNet {
 
         static ProfilingType GetProfilingType(IEnumerable<Option> options) {
             Option profiling = options.FirstOrDefault(x => x.Name == PROFILE_PIPELINE);
-            return profiling != null ?
-                    profiling.GetFlags<ProfilingType>(PROFILE_PIPELINE_VALUE) :
-                    ProfilingType.None;
+            if(profiling != null) {
+                try {
+                    return profiling.GetFlags<ProfilingType>(PROFILE_PIPELINE_VALUE);
+                }
+                catch {
+                }
+            }
+            return ProfilingType.None;
         }
 
         static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {

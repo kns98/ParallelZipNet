@@ -19,10 +19,12 @@ namespace ParallelZipNet.Pipeline.Channels {
             this.writerCount = writerCount;
         }
 
-        public bool Read(out T data) {
+        public bool Read(out T data, Profiler profiler = null) {
             data = default(T);
 
             lock(locker) {
+                profiler?.LogValue(queue.Count, ProfilingType.Channel);
+
                 while(queue.Count == 0 && writerCount > 0)
                     Monitor.Wait(locker);
               

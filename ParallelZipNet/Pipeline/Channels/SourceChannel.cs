@@ -12,7 +12,7 @@ namespace ParallelZipNet.Pipeline.Channels {
             this.action = action;
         }
 
-        public bool Read(out T data) {
+        public bool Read(out T data, Profiler profiler = null) {
             return action(out data);
         }
     }

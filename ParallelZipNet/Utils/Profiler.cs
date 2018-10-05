@@ -24,19 +24,31 @@ namespace ParallelZipNet.Utils {
         }
 
         public void BeginWatch(ProfilingType profilingType) {
-            if(this.profilingType.HasFlag(profilingType)) {
+            if(AllowProfiling(profilingType)) {
                 watch.Reset();
                 watch.Start();
             }
         }
 
         public void EndWatch(ProfilingType profilingType) {
-            if(this.profilingType.HasFlag(profilingType)) {
+            if(AllowProfiling(profilingType)) {
                 watch.Stop();            
                 double timeMicro = (double)watch.ElapsedTicks / Stopwatch.Frequency * 1000 * 1000;
-                Console.WriteLine($"{profilingType.ToString().ToUpper()} - {name} : {timeMicro}");
+                LogValueInternal(timeMicro, profilingType);
             }
-        }            
+        }
 
+        public void LogValue<T>(T value, ProfilingType profilingType) {
+            if(AllowProfiling(profilingType))
+                LogValueInternal(value, profilingType);
+        }
+
+        bool AllowProfiling(ProfilingType profilingType) {
+            return this.profilingType.HasFlag(profilingType);
+        }
+
+        void LogValueInternal<T>(T value, ProfilingType profilingType) {
+            Console.WriteLine($"{profilingType.ToString().ToUpper()} - {name} : {value}");
+        }
     }
 }
