@@ -23,12 +23,12 @@ namespace ParallelZipNet.Pipeline.Channels {
             data = default(T);
 
             lock(locker) {
-                profiler?.LogValue(queue.Count, ProfilingType.Channel);
-
                 while(queue.Count == 0 && writerCount > 0)
                     Monitor.Wait(locker);
+
+                profiler?.LogValue(queue.Count, ProfilingType.Channel);
               
-                if(queue.Count > 0) {
+                if(queue.Count > 0) {                    
                     data = queue.Dequeue();
                     return true;
                 }

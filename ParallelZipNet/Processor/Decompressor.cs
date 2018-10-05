@@ -59,9 +59,9 @@ namespace ParallelZipNet.Processor {
             ReadHeader(reader, out int chunkCount);
 
             Pipeline<Chunk>
-                .FromSource("read", ChunkSource.ReadCompressedAction(reader, chunkCount))
+                .FromSource("source", ChunkSource.ReadCompressedAction(reader, chunkCount))
                 .PipeMany("zip", ChunkConverter.Unzip, jobCount)
-                .ToTarget("write", (Chunk chunk) => {
+                .ToTarget("target", (Chunk chunk) => {
                     write(chunk);
 
                     if(profilingType == ProfilingType.None)
