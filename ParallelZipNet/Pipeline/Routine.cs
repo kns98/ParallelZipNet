@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Guards;
 using ParallelZipNet.Pipeline.Channels;
 using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;

@@ -1,4 +1,5 @@
-﻿using ParallelZipNet.Utils;
+﻿using Guards;
+using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.ChunkLayer {
     public class Chunk {

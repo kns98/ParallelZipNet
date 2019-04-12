@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using ParallelZipNet.Utils;
+using Guards;
 
 namespace ParallelZipNet.Commands {
     public class Command {        

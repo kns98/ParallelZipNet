@@ -3,6 +3,7 @@ using System.Threading;
 using ParallelZipNet.Processor;
 using ParallelZipNet.Utils;
 using ParallelZipNet.ChunkLayer;
+using Guards;
 
 namespace ParallelZipNet.Logger {
     public interface IChunkLogger {

@@ -8,6 +8,7 @@ using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
 using ParallelZipNet.Pipeline;
 using ParallelZipNet.Pipeline.Channels;
+using Guards;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using Guards;
 using ParallelZipNet.Utils;
 
 namespace ParallelZipNet.Pipeline.Channels {

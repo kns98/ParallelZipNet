@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Guards;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
 

@@ -7,6 +7,7 @@ using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
 using ParallelZipNet.Pipeline;
+using Guards;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
