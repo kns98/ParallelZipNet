@@ -6,6 +6,8 @@ using Guards;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
 
+using CancellationToken = ParallelCore.CancellationToken;
+
 namespace ParallelZipNet.Threading {
     public static class ParallelContextBuilder {
         public static ParallelContext<T> AsParallel<T>(this IEnumerable<T> enumeration, int jobCount) {

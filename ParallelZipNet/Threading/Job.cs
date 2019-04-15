@@ -4,6 +4,8 @@ using System.Threading;
 using Guards;
 using ParallelZipNet.Utils;
 
+using CancellationToken = ParallelCore.CancellationToken;
+
 namespace ParallelZipNet.Threading {
     public class Job<T> : IDisposable {
         const int timeout = 10;

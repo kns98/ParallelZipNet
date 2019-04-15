@@ -8,11 +8,12 @@ using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
 using Guards;
 using ParallelPipeline;
+using ParallelCore;
 
 namespace ParallelZipNet.Processor {
     public static class Compressor {
         public static void RunAsEnumerable(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
-            Threading.CancellationToken cancellationToken = null, Loggers loggers = null) {
+            CancellationToken cancellationToken = null, Loggers loggers = null) {
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
@@ -44,7 +45,7 @@ namespace ParallelZipNet.Processor {
         }
 
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
-            ParallelPipeline.CancellationToken cancellationToken = null, Loggers loggers = null, ProfilingType profilingType = ProfilingType.None) {
+            CancellationToken cancellationToken = null, Loggers loggers = null, ProfilingType profilingType = ProfilingType.None) {
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));

@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using ParallelZipNet.Logger;
 
+using CancellationToken = ParallelCore.CancellationToken;
+
 namespace ParallelZipNet.Tests {
     public class ThreadingTests {
         const int timeout = 5000;
@@ -105,7 +107,7 @@ namespace ParallelZipNet.Tests {
             int resultTreshold = jobCount * 3;
 
             var cancellationEvent = new AutoResetEvent(false);
-            var cancellationToken = new Threading.CancellationToken();
+            var cancellationToken = new CancellationToken();
 
             List<int> results = new List<int>();
 

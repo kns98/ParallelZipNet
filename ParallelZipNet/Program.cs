@@ -7,6 +7,7 @@ using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
 using ParallelPipeline;
+using ParallelCore;
 
 namespace ParallelZipNet {
     class Program {
@@ -29,8 +30,7 @@ namespace ParallelZipNet {
             PROFILE_PIPELINE_KEY = "--profile-pipeline",
             PROFILE_PIPELINE_VALUE = "PROFILE_PIPELINE_VALUE";
 
-        static readonly Threading.CancellationToken cancellationToken = new Threading.CancellationToken();
-        static readonly ParallelPipeline.CancellationToken cancellationToken2 = new ParallelPipeline.CancellationToken();
+        static readonly CancellationToken cancellationToken = new CancellationToken();
 
         static readonly CommandProcessor commands = new CommandProcessor();
 
@@ -61,14 +61,13 @@ namespace ParallelZipNet {
             Console.CancelKeyPress += (s, e) => {
                 e.Cancel = true;
                 cancellationToken.Cancel();
-                cancellationToken2.Cancel();
             };
             
             try {
                 commands.Parse(args)();
 
                 Console.WriteLine();
-                if(cancellationToken.IsCancelled || cancellationToken2.IsCancelled)
+                if(cancellationToken.IsCancelled)
                     Console.WriteLine("Cancelled.");
                 else
                     Console.WriteLine("Done.");                                    
@@ -111,7 +110,7 @@ namespace ParallelZipNet {
             Action<BinaryReader, BinaryWriter> processor;
             if(UsePipeline(options)) {
                 ProfilingType profilingType = GetProfilingType(options);
-                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken2, loggers,
+                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
                     profilingType);
             }
             else
@@ -132,7 +131,7 @@ namespace ParallelZipNet {
             Action<BinaryReader, BinaryWriter> processor;
             if(UsePipeline(options)) {
                 ProfilingType profilingType = GetProfilingType(options);
-                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken2, loggers,
+                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
                     profilingType);
             }
             else

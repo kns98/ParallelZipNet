@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ParallelZipNet\ParallelZipNet.csproj" />
+    <PackageReference Include="RA_ParallelCore" Version="1.0.0-release" />
   </ItemGroup>
 </Project>
