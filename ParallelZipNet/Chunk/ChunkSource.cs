@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using ParallelZipNet.Pipeline.Channels;
+using ParallelPipeline.Channels;
 
 namespace ParallelZipNet.ChunkLayer {
     public static class ChunkSource {

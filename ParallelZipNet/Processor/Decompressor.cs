@@ -6,8 +6,8 @@ using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
-using ParallelZipNet.Pipeline;
 using Guards;
+using ParallelPipeline;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {
@@ -44,7 +44,7 @@ namespace ParallelZipNet.Processor {
         }
 
         public static void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
-            Threading.CancellationToken cancellationToken = null, Loggers loggers = null, ProfilingType profilingType = ProfilingType.None) {                        
+            ParallelPipeline.CancellationToken cancellationToken = null, Loggers loggers = null, ProfilingType profilingType = ProfilingType.None) {                        
 
             Guard.NotNull(reader, nameof(reader));
             Guard.NotNull(writer, nameof(writer));
