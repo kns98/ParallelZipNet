@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using ParallelZipNet.Threading;
 using ParallelZipNet.Utils;
 using ParallelZipNet.Logger;
 using ParallelZipNet.ChunkLayer;
 using Guards;
 using ParallelPipeline;
 using ParallelCore;
+using ParallelContext;
 
 namespace ParallelZipNet.Processor {
     public static class Decompressor {

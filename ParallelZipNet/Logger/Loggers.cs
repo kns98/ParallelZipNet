@@ -1,3 +1,5 @@
+using ParallelContext;
+
 namespace ParallelZipNet.Logger {
     public class Loggers {
         public IDefaultLogger DefaultLogger { get; set;}
