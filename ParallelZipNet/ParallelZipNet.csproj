@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="RA_Guards" Version="1.0.0-release" />
+    <PackageReference Include="RA_CommandParser" Version="1.0.0-release" />
     <PackageReference Include="RA_ParallelCore" Version="1.0.0-release" />
     <PackageReference Include="RA_ParallelContext" Version="1.0.0-release" />
     <PackageReference Include="RA_ParallelPipeline" Version="1.0.0-release" />

@@ -3,11 +3,11 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using ParallelZipNet.Processor;
-using ParallelZipNet.Commands;
 using ParallelZipNet.Logger;
 using ParallelZipNet.Utils;
 using ParallelPipeline;
 using ParallelCore;
+using CommandParser;
 
 namespace ParallelZipNet {
     class Program {
