@@ -11,50 +11,39 @@ using CommandParser;
 
 namespace ParallelZipNet {
     class Program {
-        const string
-            HELP = "HELP",
-            COMPRESS = "COMPRESS",
-            DECOMPRESS = "DECOMPRESS",
-            SRC = "SRC",
-            DEST = "DEST",
-            LOG_CHUNKS = "--log-chunks",
-            LOG_JOBS = "--log-jobs",
-            USE_PIPELINE = "--use-pipeline",
-            JOBCOUNT = "JOBCOUNT",
-            JOBCOUNT_KEY = "--job-count",
-            JOBCOUNT_VALUE = "JOBCOUNT_VALUE",
-            CHUNKSIZE = "CHUNKSIZE",
-            CHUNKSIZE_KEY = "--chunk-size",
-            CHUNKSIZE_VALUE = "CHUNKSIZE_VALUE",
-            PROFILE_PIPELINE = "PROFILE_PIPELINE",
-            PROFILE_PIPELINE_KEY = "--profile-pipeline",
-            PROFILE_PIPELINE_VALUE = "PROFILE_PIPELINE_VALUE";
-
         static readonly CancellationToken cancellationToken = new CancellationToken();
-
         static readonly CommandProcessor commands = new CommandProcessor();
 
         static Program() {
+            Command SetupSecondary(Command command) =>
+                command
+                    .Secondary("JobCount", it => it.WithKey("--job-count").WithInteger("Value"))
+                    .Secondary("ChunkSize", it => it.WithKey("--chunk-size").WithInteger("Value"))
+                    .Secondary("UsePipeline", it => it.WithKey("--use-pipeline"))
+                    .Secondary("ProfilePipeline", it => it.WithKey("--profile-pipeline").WithFlags<ProfilingType>("Value"))
+                    .Secondary("LogChunks", it => it.WithKey("--log-chunks"))
+                    .Secondary("LogJobs", it => it.WithKey("--log-jobs"));
+
             commands.Register(Default)                
-                .Optional(HELP, new[] { "--help", "-h", "-?" }, new string[0]);
+                .Secondary("Help", it => it.WithKey("--help"));
 
-            commands.Register(Compress)
-                .Required(COMPRESS, new[] { "compress", "c" }, new[] { SRC, DEST })                
-                .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
-                .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
-                .Optional(USE_PIPELINE)
-                .Optional(PROFILE_PIPELINE, new[] { PROFILE_PIPELINE_KEY }, new[] { PROFILE_PIPELINE_VALUE })
-                .Optional(LOG_CHUNKS)
-                .Optional(LOG_JOBS);
+            Command compress = commands.Register(opt => Process(opt,
+                op => op.Compress.Src,
+                op => op.Compress.Dest,
+                Compressor.RunAsEnumerable,
+                Compressor.RunAsPipeline))
+                    .Primary("Compress", it => it.WithKey("compress").WithString("Src").WithString("Dest"));
 
-            commands.Register(Decompress)
-                .Required(DECOMPRESS, new[] { "decompress", "d" }, new[] { SRC, DEST })
-                .Optional(JOBCOUNT, new[] { JOBCOUNT_KEY }, new[] { JOBCOUNT_VALUE } )
-                .Optional(CHUNKSIZE, new[] { CHUNKSIZE_KEY }, new[] { CHUNKSIZE_VALUE })
-                .Optional(USE_PIPELINE)
-                .Optional(PROFILE_PIPELINE, new[] { PROFILE_PIPELINE_KEY }, new[] { PROFILE_PIPELINE_VALUE })
-                .Optional(LOG_CHUNKS)
-                .Optional(LOG_JOBS);              
+            Command decompress = commands.Register(opt => Process(opt,
+                op => op.Decompress.Src,
+                op => op.Decompress.Dest,
+                Decompressor.RunAsEnumerable,
+                Decompressor.RunAsPipeline))
+                    .Primary("Decompress", it => it.WithKey("decompress").WithString("Src").WithString("Dest"));
+
+            SetupSecondary(compress);
+            SetupSecondary(decompress);
+
         }
 
         static int Main(string[] args) {
@@ -64,19 +53,21 @@ namespace ParallelZipNet {
             };
             
             try {
-                commands.Parse(args)();
+                Action action = commands.Parse(args);
+                if(action != null) {
+                    action();
 
-                Console.WriteLine();
-                if(cancellationToken.IsCancelled)
-                    Console.WriteLine("Cancelled.");
-                else
-                    Console.WriteLine("Done.");                                    
-
-                return 0;
-            }
-            catch(UnknownCommandException) {
-                Console.WriteLine();
-                Console.WriteLine("Unknown Command. Use --help for more information.");
+                    Console.WriteLine();
+                    if(cancellationToken.IsCancelled)
+                        Console.WriteLine("Cancelled.");
+                    else
+                        Console.WriteLine("Done.");                                    
+                    return 0;
+                }
+                else {
+                    Console.WriteLine();
+                    Console.WriteLine("Unknown Command. Use --help for more information.");
+                }
             }
             catch(AggregateException ex) {
                 Console.WriteLine();
@@ -92,104 +83,41 @@ namespace ParallelZipNet {
             return 1;
         }
 
-        static void Default(IEnumerable<Option> options) {
-            Option help = options.FirstOrDefault(x => x.Name == HELP);
-            if(help != null)
-                Help();            
+        static void Default(dynamic options) {
+            if(options.Help != null)
+                Help();
         }
 
-        static void Compress(IEnumerable<Option> options) {
-            Option compress = options.First(x => x.Name == COMPRESS);
-            string src = compress.GetStringParam(SRC);
-            string dest = compress.GetStringParam(DEST);
+        static void Process(dynamic options, Func<dynamic, string> getSrc, Func<dynamic, string> getDest,
+            RunAsEnumerable runAsEnumerable, RunAsPipeline runAsPipeline) {
 
-            int jobCount = GetJobCount(options);
-            int chunkSize = GetChunkSize(options);
-            Loggers loggers = GetLoggers(options);            
+            string src = getSrc(options);
+            string dest = getDest(options);
+
+            int jobCount = options.JobCount?.Value ?? Constants.DEFAULT_JOB_COUNT;
+            if(jobCount < 1 || jobCount > Constants.MAX_JOB_COUNT)
+                jobCount = Constants.DEFAULT_JOB_COUNT;
+
+            int chunkSize = options.ChunkSize?.Value ?? Constants.DEFAULT_CHUNK_SIZE;
+            if(chunkSize < Constants.MIN_CHUNK_SIZE || chunkSize > Constants.MAX_CHUNK_SIZE)
+                chunkSize = Constants.DEFAULT_CHUNK_SIZE;
+
+            var loggers = new Loggers {
+                DefaultLogger = new DefaultLogger(),                
+                ChunkLogger = options.LogChunks != null ? new ChunkLogger() : null,
+                JobLogger = options.LogJobs != null ? new JobLogger() : null
+            };              
 
             Action<BinaryReader, BinaryWriter> processor;
-            if(UsePipeline(options)) {
-                ProfilingType profilingType = GetProfilingType(options);
-                processor = (reader, writer) => Compressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
-                    profilingType);
+            if(options.UsePipeline != null) {
+                ProfilingType profilingType = options.ProfilePipeline?.Value ?? ProfilingType.None;
+                processor = (reader, writer) => runAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profilingType);
             }
             else
-                processor = (reader, writer) => Compressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+                processor = (reader, writer) => runAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
 
-            ProcessFile(src, dest, processor);
-        }
-
-        static void Decompress(IEnumerable<Option> options) {
-            Option decompress = options.First(x => x.Name == DECOMPRESS);
-            string src = decompress.GetStringParam(SRC);
-            string dest = decompress.GetStringParam(DEST);
-
-            int jobCount = GetJobCount(options);
-            int chunkSize = GetChunkSize(options);
-            Loggers loggers = GetLoggers(options);            
-
-            Action<BinaryReader, BinaryWriter> processor;
-            if(UsePipeline(options)) {
-                ProfilingType profilingType = GetProfilingType(options);
-                processor = (reader, writer) => Decompressor.RunAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers,
-                    profilingType);
-            }
-            else
-                processor = (reader, writer) => Decompressor.RunAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
-
-            ProcessFile(src, dest, processor);
-        }      
-
-        static bool UsePipeline(IEnumerable<Option> options) {
-            return options.Any(x => x.Name == USE_PIPELINE);
-        }
-
-        static int GetJobCount(IEnumerable<Option> options) {
-            Option jobs = options.FirstOrDefault(x => x.Name == JOBCOUNT);            
-            if(jobs != null) {                        
-                try {
-                    return jobs.GetIntegerParam(JOBCOUNT_VALUE, 1, Constants.MAX_JOB_COUNT);
-                }
-                catch {                    
-                }
-            }
-            return Constants.DEFAULT_JOB_COUNT;
-        }
-
-        static int GetChunkSize(IEnumerable<Option> options) {
-            Option chunks = options.FirstOrDefault(x => x.Name == CHUNKSIZE);
-            if(chunks != null) {
-                try {
-                    return chunks.GetIntegerParam(CHUNKSIZE_VALUE, Constants.MIN_CHUNK_SIZE, Constants.MAX_CHUNK_SIZE);
-                }
-                catch {                    
-                }
-            }
-            return Constants.DEFAULT_CHUNK_SIZE;
-        }
-
-        static Loggers GetLoggers(IEnumerable<Option> options) {
-            var loggers = new Loggers();            
-            if(options.Any(x => x.Name == LOG_CHUNKS))
-                loggers.ChunkLogger = new ChunkLogger();
-            else if(options.Any(x => x.Name == LOG_JOBS))
-                loggers.JobLogger = new JobLogger();
-            else
-                loggers.DefaultLogger = new DefaultLogger();            
-            return loggers;
-        }
-
-        static ProfilingType GetProfilingType(IEnumerable<Option> options) {
-            Option profiling = options.FirstOrDefault(x => x.Name == PROFILE_PIPELINE);
-            if(profiling != null) {
-                try {
-                    return profiling.GetFlags<ProfilingType>(PROFILE_PIPELINE_VALUE);
-                }
-                catch {
-                }
-            }
-            return ProfilingType.None;
-        }
+            ProcessFile(src, dest, processor);            
+        }        
 
         static void ProcessFile(string src, string dest, Action<BinaryReader, BinaryWriter> processor) {
             var srcInfo = new FileInfo(src);
@@ -222,10 +150,10 @@ namespace ParallelZipNet {
 Usage: ParallelZipNet (<Compress> | <Decompress> | <Help>)
 
 Compress:
-    (compress | c) <src> <dest> [<Options>]
+    compress <src> <dest> [<Options>]
     
 Decompress:
-    (decompress | d) <src> <dest> [<Options>]    
+    decompress <src> <dest> [<Options>]    
 
 Options:
     --job-count <number>                                a number of concurrent threads
@@ -233,10 +161,10 @@ Options:
     --log-chunks                                        log chunks details to console
     --log-jobs                                          log job details to console
     --use-pipeline                                      apply the pipeline approach
-    --profile-pipeline read_write_transform_channel     profile a set of pipeline actions (considered as flags)
+    --profile-pipeline read,write,transform,channel     profile a set of pipeline actions (considered as flags)
 
 Help:
-    --help, -h, -?");
+    --help");
         }
     }
 }

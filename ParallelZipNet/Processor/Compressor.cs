@@ -11,6 +11,13 @@ using ParallelCore;
 using ParallelContext;
 
 namespace ParallelZipNet.Processor {
+    public delegate void RunAsEnumerable(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize,
+        CancellationToken cancellationToken, Loggers loggers);
+
+    public delegate void RunAsPipeline(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize,
+        CancellationToken cancellationToken, Loggers loggers, ProfilingType profilingType);
+
+
     public static class Compressor {
         public static void RunAsEnumerable(BinaryReader reader, BinaryWriter writer, int jobCount, int chunkSize = Constants.DEFAULT_CHUNK_SIZE,
             CancellationToken cancellationToken = null, Loggers loggers = null) {
