@@ -24,9 +24,6 @@ namespace ParallelZipNet {
                     .Secondary("LogChunks", it => it.WithKey("--log-chunks"))
                     .Secondary("LogJobs", it => it.WithKey("--log-jobs"));
 
-            commands.Register(Default)                
-                .Secondary("Help", it => it.WithKey("--help"));
-
             Command compress = commands.Register(opt => Process(opt,
                 op => op.Compress.Src,
                 op => op.Compress.Dest,
@@ -44,6 +41,8 @@ namespace ParallelZipNet {
             SetupSecondary(compress);
             SetupSecondary(decompress);
 
+            commands.Register(Default)                
+                .Secondary("Help", it => it.WithKey("--help"));
         }
 
         static int Main(string[] args) {
