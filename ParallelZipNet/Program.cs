@@ -11,8 +11,8 @@ using CommandParser;
 
 namespace ParallelZipNet {
     class Program {
-        static readonly CancellationToken cancellationToken = new CancellationToken();
-        static readonly CommandProcessor commands = new CommandProcessor();
+        static readonly CancellationToken _cancellationToken = new CancellationToken();
+        static readonly CommandProcessor _commands = new CommandProcessor();
 
         static Program() {
             Command SetupSecondary(Command command) =>
@@ -24,14 +24,14 @@ namespace ParallelZipNet {
                     .Secondary("LogChunks", it => it.WithKey("--log-chunks"))
                     .Secondary("LogJobs", it => it.WithKey("--log-jobs"));
 
-            Command compress = commands.Register(opt => Process(opt,
+            Command compress = _commands.Register(opt => Process(opt,
                 op => op.Compress.Src,
                 op => op.Compress.Dest,
                 Compressor.RunAsEnumerable,
                 Compressor.RunAsPipeline))
                     .Primary("Compress", it => it.WithKey("compress").WithString("Src").WithString("Dest"));
 
-            Command decompress = commands.Register(opt => Process(opt,
+            Command decompress = _commands.Register(opt => Process(opt,
                 op => op.Decompress.Src,
                 op => op.Decompress.Dest,
                 Decompressor.RunAsEnumerable,
@@ -41,23 +41,23 @@ namespace ParallelZipNet {
             SetupSecondary(compress);
             SetupSecondary(decompress);
 
-            commands.Register(Default)                
+            _commands.Register(Default)                
                 .Secondary("Help", it => it.WithKey("--help"));
         }
 
         static int Main(string[] args) {
             Console.CancelKeyPress += (s, e) => {
                 e.Cancel = true;
-                cancellationToken.Cancel();
+                _cancellationToken.Cancel();
             };
             
             try {
-                Action action = commands.Parse(args);
+                Action action = _commands.Parse(args);
                 if(action != null) {
                     action();
 
                     Console.WriteLine();
-                    if(cancellationToken.IsCancelled)
+                    if(_cancellationToken.IsCancelled)
                         Console.WriteLine("Cancelled.");
                     else
                         Console.WriteLine("Done.");                                    
@@ -110,10 +110,10 @@ namespace ParallelZipNet {
             Action<BinaryReader, BinaryWriter> processor;
             if(options.UsePipeline != null) {
                 ProfilingType profilingType = options.ProfilePipeline?.Value ?? ProfilingType.None;
-                processor = (reader, writer) => runAsPipeline(reader, writer, jobCount, chunkSize, cancellationToken, loggers, profilingType);
+                processor = (reader, writer) => runAsPipeline(reader, writer, jobCount, chunkSize, _cancellationToken, loggers, profilingType);
             }
             else
-                processor = (reader, writer) => runAsEnumerable(reader, writer, jobCount, chunkSize, cancellationToken, loggers);
+                processor = (reader, writer) => runAsEnumerable(reader, writer, jobCount, chunkSize, _cancellationToken, loggers);
 
             ProcessFile(src, dest, processor);            
         }        
