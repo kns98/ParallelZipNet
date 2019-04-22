@@ -94,12 +94,12 @@ namespace ParallelZipNet {
             string dest = getDest(options);
 
             int jobCount = options.JobCount?.Value ?? Constants.DEFAULT_JOB_COUNT;
-            if(jobCount < 1 || jobCount > Constants.MAX_JOB_COUNT)
-                jobCount = Constants.DEFAULT_JOB_COUNT;
+            jobCount = Math.Max(jobCount, 1);
+            jobCount = Math.Min(jobCount, Constants.MAX_JOB_COUNT);
 
             int chunkSize = options.ChunkSize?.Value ?? Constants.DEFAULT_CHUNK_SIZE;
-            if(chunkSize < Constants.MIN_CHUNK_SIZE || chunkSize > Constants.MAX_CHUNK_SIZE)
-                chunkSize = Constants.DEFAULT_CHUNK_SIZE;
+            chunkSize = Math.Max(chunkSize, Constants.MIN_CHUNK_SIZE);
+            chunkSize = Math.Min(chunkSize, Constants.MAX_CHUNK_SIZE);
 
             var loggers = new Loggers {
                 DefaultLogger = new DefaultLogger(),                
