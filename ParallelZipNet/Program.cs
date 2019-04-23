@@ -101,11 +101,13 @@ namespace ParallelZipNet {
             chunkSize = Math.Max(chunkSize, Constants.MIN_CHUNK_SIZE);
             chunkSize = Math.Min(chunkSize, Constants.MAX_CHUNK_SIZE);
 
-            var loggers = new Loggers {
-                DefaultLogger = new DefaultLogger(),                
-                ChunkLogger = options.LogChunks != null ? new ChunkLogger() : null,
-                JobLogger = options.LogJobs != null ? new JobLogger() : null
-            };              
+            var loggers = new Loggers();
+            if(options.LogChunks != null)
+                loggers.ChunkLogger = new ChunkLogger();
+            else if(options.LogJobs != null)
+                loggers.JobLogger = new JobLogger();
+            else
+                loggers.DefaultLogger = new DefaultLogger();            
 
             Action<BinaryReader, BinaryWriter> processor;
             if(options.UsePipeline != null) {
