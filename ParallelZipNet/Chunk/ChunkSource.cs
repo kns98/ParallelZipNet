@@ -4,7 +4,11 @@ using ParallelPipeline.Channels;
 
 namespace ParallelZipNet.ChunkLayer {
     public static class ChunkSource {
-        public static IEnumerable<Chunk> Read(BinaryReader reader, int chunkSize) {
+        public static void ReadHeader(BinaryReader reader, out int chunkCount) {
+            chunkCount = reader.ReadInt32();
+        }
+
+        public static IEnumerable<Chunk> ReadChunk(BinaryReader reader, int chunkSize) {
             bool isLastChunk;
             int chunkIndex = 0;
             do {                
@@ -22,7 +26,7 @@ namespace ParallelZipNet.ChunkLayer {
             while(!isLastChunk);            
         }
 
-        public static IEnumerable<Chunk> ReadCompressed(BinaryReader reader, int chunkCount) {
+        public static IEnumerable<Chunk> ReadChunkCompressed(BinaryReader reader, int chunkCount) {
             if(chunkCount <= 0)
                 throw new InvalidDataException();
 
@@ -38,22 +42,6 @@ namespace ParallelZipNet.ChunkLayer {
 
                 yield return new Chunk(chunkIndex, reader.ReadBytes(chunkLength));                
             }
-        }
-
-        public static SourceAction<Chunk> ReadAction(BinaryReader reader, int chunkSize) {
-            var chunkEnumerator = Read(reader, chunkSize).GetEnumerator();
-            return ReadAction(chunkEnumerator);
-        }
-
-        public static SourceAction<Chunk> ReadCompressedAction(BinaryReader reader, int chunkCount) {
-            var chunkEnumerator = ReadCompressed(reader, chunkCount).GetEnumerator();
-            return ReadAction(chunkEnumerator);
-        }
-
-        static SourceAction<Chunk> ReadAction(IEnumerator<Chunk> chunkEnumerator) => (out Chunk chunk) => {              
-            bool next = chunkEnumerator.MoveNext();
-            chunk = next ? chunkEnumerator.Current : null;
-            return next;
-        };        
+        }       
     }
 }

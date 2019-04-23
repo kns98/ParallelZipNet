@@ -2,9 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using ParallelZipNet.Processor;
 using ParallelZipNet.Logger;
-using ParallelZipNet.Utils;
 using ParallelPipeline;
 using ParallelCore;
 using CommandParser;
@@ -27,15 +25,15 @@ namespace ParallelZipNet {
             Command compress = _commands.Register(opt => Process(opt,
                 op => op.Compress.Src,
                 op => op.Compress.Dest,
-                Compressor.RunAsEnumerable,
-                Compressor.RunAsPipeline))
+                RunAsEnumerable.Compress,
+                RunAsPipeline.Compress))
                     .Primary("Compress", it => it.WithKey("compress").WithString("Src").WithString("Dest"));
 
             Command decompress = _commands.Register(opt => Process(opt,
                 op => op.Decompress.Src,
                 op => op.Decompress.Dest,
-                Decompressor.RunAsEnumerable,
-                Decompressor.RunAsPipeline))
+                RunAsEnumerable.Decompress,
+                RunAsPipeline.Decompress))
                     .Primary("Decompress", it => it.WithKey("decompress").WithString("Src").WithString("Dest"));
 
             SetupSecondary(compress);
@@ -88,7 +86,7 @@ namespace ParallelZipNet {
         }
 
         static void Process(dynamic options, Func<dynamic, string> getSrc, Func<dynamic, string> getDest,
-            RunAsEnumerable runAsEnumerable, RunAsPipeline runAsPipeline) {
+            RunAsEnumerable.Action runAsEnumerable, RunAsPipeline.Action runAsPipeline) {
 
             string src = getSrc(options);
             string dest = getDest(options);

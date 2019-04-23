@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ParallelZipNet.Utils {
+namespace ParallelZipNet {
     static class Constants {        
         public const int DEFAULT_CHUNK_SIZE = (1 << 18); // 256KB
         public const int MIN_CHUNK_SIZE = (1 << 10); // 1KB

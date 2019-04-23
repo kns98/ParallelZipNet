@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using FluentAssertions;
-using ParallelZipNet.Processor;
 using Xunit;
 using FakeItEasy;
 using ParallelZipNet.Logger;
@@ -31,12 +30,12 @@ namespace ParallelZipNet.Tests {
             using(var tempWriter = new BinaryWriter(tempStream))            
             using(var tempReader = new BinaryReader(tempStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Compressor.RunAsEnumerable(srcReader, tempWriter, 1, chunkSize, null, loggersCompress);
+                RunAsEnumerable.Compress(srcReader, tempWriter, 1, chunkSize, null, loggersCompress);
 
                 tempWriter.Flush();
                 tempWriter.Seek(0, SeekOrigin.Begin);
 
-                Decompressor.RunAsEnumerable(tempReader, destWriter, 1, chunkSize, null, loggersDecompress);
+                RunAsEnumerable.Decompress(tempReader, destWriter, 1, chunkSize, null, loggersDecompress);
 
                 return destStream.ToArray();
             }            
@@ -54,7 +53,7 @@ namespace ParallelZipNet.Tests {
 
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Action act = () => Decompressor.RunAsEnumerable(srcReader, destWriter, 1, chunkSize);
+                Action act = () => RunAsEnumerable.Decompress(srcReader, destWriter, 1, chunkSize);
                 act.Should().Throw<InvalidDataException>();                
             }
         }
@@ -70,7 +69,7 @@ namespace ParallelZipNet.Tests {
 
             using(var srcReader = new BinaryReader(srcStream))
             using(var destWriter = new BinaryWriter(destStream)) {
-                Action act = () => Compressor.RunAsEnumerable(srcReader, destWriter, 1, chunkSize, null, new Loggers { ChunkLogger = fakeLogger });
+                Action act = () => RunAsEnumerable.Compress(srcReader, destWriter, 1, chunkSize, null, new Loggers { ChunkLogger = fakeLogger });
                 act.Should().Throw<InvalidOperationException>();
             }
         }
