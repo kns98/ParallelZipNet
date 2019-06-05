@@ -58,24 +58,24 @@ namespace ParallelZipNet {
                     if(_cancellationToken.IsCancelled)
                         Console.WriteLine("Cancelled.");
                     else
-                        Console.WriteLine("Done.");                                    
+                        Console.WriteLine("Done.");
                     return 0;
                 }
                 else {
-                    Console.WriteLine();
-                    Console.WriteLine("Unknown Command. Use --help for more information.");
+                    Console.Error.WriteLine();
+                    Console.Error.WriteLine("Unknown Command. Use --help for more information.");
                 }
             }
             catch(AggregateException ex) {
-                Console.WriteLine();
+                Console.Error.WriteLine();
                 ex.Handle(x => {
-                    Console.WriteLine(x.Message);
+                    Console.Error.WriteLine(x.Message);
                     return true;
                 });
             }
             catch(Exception e) {
-                Console.WriteLine();
-                Console.WriteLine(e.Message);
+                Console.Error.WriteLine();
+                Console.Error.WriteLine(e.Message);
             }
             return 1;
         }
