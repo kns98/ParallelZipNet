@@ -1,0 +1,215 @@
+{
+  "version": 3,
+  "targets": {
+    "net6.0": {
+      "RA_CommandParser/2.0.0-release": {
+        "type": "package",
+        "dependencies": {
+          "RA_Guards": "1.0.0-release"
+        },
+        "compile": {
+          "lib/netstandard2.0/CommandParser.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/CommandParser.dll": {}
+        }
+      },
+      "RA_Guards/1.0.0-release": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/Guards.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/Guards.dll": {}
+        }
+      },
+      "RA_ParallelContext/1.0.0-release": {
+        "type": "package",
+        "dependencies": {
+          "RA_Guards": "1.0.0-release",
+          "RA_ParallelCore": "1.0.0-release"
+        },
+        "compile": {
+          "lib/netstandard2.0/ParallelContext.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/ParallelContext.dll": {}
+        }
+      },
+      "RA_ParallelCore/1.0.0-release": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/ParallelCore.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/ParallelCore.dll": {}
+        }
+      },
+      "RA_ParallelPipeline/1.0.0-release": {
+        "type": "package",
+        "dependencies": {
+          "RA_Guards": "1.0.0-release",
+          "RA_ParallelCore": "1.0.0-release"
+        },
+        "compile": {
+          "lib/netstandard2.0/ParallelPipeline.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/ParallelPipeline.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RA_CommandParser/2.0.0-release": {
+      "sha512": "8kpMRllWgR9wqERB8wGnGLujQ52aS04MR4OT0b84LuaQC/8phJOO3ZNPS9HBYl62mL/wyYDXNgcPkIbSOKuKVA==",
+      "type": "package",
+      "path": "ra_commandparser/2.0.0-release",
+      "files": [
+        ".nupkg.metadata",
+        "lib/netstandard2.0/CommandParser.dll",
+        "ra_commandparser.2.0.0-release.nupkg.sha512",
+        "ra_commandparser.nuspec"
+      ]
+    },
+    "RA_Guards/1.0.0-release": {
+      "sha512": "fmwhv2Ds1SbW7o2iaGAX0x0Cy59oDZhFMsynsiixUC3uTAmcnz//Y78n9Z2IDb5f2vfticdwGcDlcuMHRNxf2g==",
+      "type": "package",
+      "path": "ra_guards/1.0.0-release",
+      "files": [
+        ".nupkg.metadata",
+        "lib/netstandard2.0/Guards.dll",
+        "ra_guards.1.0.0-release.nupkg.sha512",
+        "ra_guards.nuspec"
+      ]
+    },
+    "RA_ParallelContext/1.0.0-release": {
+      "sha512": "RjryXYZRJalxXrqNueUou+75zn58pexNvJaMeahWqVHl3GZpayO1fJ6IYzeXhQE9Pt5bzZXuD3WGSd6+xj18PA==",
+      "type": "package",
+      "path": "ra_parallelcontext/1.0.0-release",
+      "files": [
+        ".nupkg.metadata",
+        "lib/netstandard2.0/ParallelContext.dll",
+        "ra_parallelcontext.1.0.0-release.nupkg.sha512",
+        "ra_parallelcontext.nuspec"
+      ]
+    },
+    "RA_ParallelCore/1.0.0-release": {
+      "sha512": "+oNXX3eXcLtST5Ho/GKEuKb2vWRf4O1tWdB1dF6ujmbKz/I4NQJL0wfPhuFPsn1yWsTHgyyK6loOuJGiSFMVUw==",
+      "type": "package",
+      "path": "ra_parallelcore/1.0.0-release",
+      "files": [
+        ".nupkg.metadata",
+        "lib/netstandard2.0/ParallelCore.dll",
+        "ra_parallelcore.1.0.0-release.nupkg.sha512",
+        "ra_parallelcore.nuspec"
+      ]
+    },
+    "RA_ParallelPipeline/1.0.0-release": {
+      "sha512": "zN5NPrpYskO9Lq+IKiJPltx7xrpmWBfn+Djf28yFyW5ICRipPdYtWCv+wuwRqV/aQWOTPbgmjnCYOFchcFLe6A==",
+      "type": "package",
+      "path": "ra_parallelpipeline/1.0.0-release",
+      "files": [
+        ".nupkg.metadata",
+        "lib/netstandard2.0/ParallelPipeline.dll",
+        "ra_parallelpipeline.1.0.0-release.nupkg.sha512",
+        "ra_parallelpipeline.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net6.0": [
+      "RA_CommandParser >= 2.0.0-release",
+      "RA_Guards >= 1.0.0-release",
+      "RA_ParallelContext >= 1.0.0-release",
+      "RA_ParallelCore >= 1.0.0-release",
+      "RA_ParallelPipeline >= 1.0.0-release"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\kevin\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\kevin\\Source\\Repos\\kns98\\ParallelZipNet\\ParallelZipNet\\ParallelZipNet.csproj",
+      "projectName": "ParallelZipNet",
+      "projectPath": "C:\\Users\\kevin\\Source\\Repos\\kns98\\ParallelZipNet\\ParallelZipNet\\ParallelZipNet.csproj",
+      "packagesPath": "C:\\Users\\kevin\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\kevin\\Source\\Repos\\kns98\\ParallelZipNet\\ParallelZipNet\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\kevin\\Source\\Repos\\kns98\\ParallelZipNet\\NuGet.Config",
+        "C:\\Users\\kevin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net6.0"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {},
+        "https://www.myget.org/F/romanageev-ci/api/v3/index.json": {}
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "net6.0": {
+        "targetAlias": "net6.0",
+        "dependencies": {
+          "RA_CommandParser": {
+            "target": "Package",
+            "version": "[2.0.0-release, )"
+          },
+          "RA_Guards": {
+            "target": "Package",
+            "version": "[1.0.0-release, )"
+          },
+          "RA_ParallelContext": {
+            "target": "Package",
+            "version": "[1.0.0-release, )"
+          },
+          "RA_ParallelCore": {
+            "target": "Package",
+            "version": "[1.0.0-release, )"
+          },
+          "RA_ParallelPipeline": {
+            "target": "Package",
+            "version": "[1.0.0-release, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.201\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

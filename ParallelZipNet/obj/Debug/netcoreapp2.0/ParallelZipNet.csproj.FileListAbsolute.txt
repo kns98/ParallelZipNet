@@ -1,0 +1,13 @@
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\bin\Debug\netcoreapp2.0\ParallelZipNet.deps.json
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\bin\Debug\netcoreapp2.0\ParallelZipNet.runtimeconfig.json
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\bin\Debug\netcoreapp2.0\ParallelZipNet.runtimeconfig.dev.json
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\bin\Debug\netcoreapp2.0\ParallelZipNet.dll
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\bin\Debug\netcoreapp2.0\ParallelZipNet.pdb
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.csproj.AssemblyReference.cache
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.AssemblyInfoInputs.cache
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.AssemblyInfo.cs
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.csproj.CoreCompileInputs.cache
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.dll
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.pdb
+C:\Users\kevin\Source\Repos\kns98\ParallelZipNet\ParallelZipNet\obj\Debug\netcoreapp2.0\ParallelZipNet.genruntimeconfig.cache

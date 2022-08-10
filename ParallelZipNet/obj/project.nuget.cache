@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "EWo9pcDc6vyN7qG+2rquIGn1mUgmYvmKQg9fubA8XhPzdjoYymOc4IuzNAkemRTMkmy+3XSYykq6j1wKE+LwiA==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\kevin\\Source\\Repos\\kns98\\ParallelZipNet\\ParallelZipNet\\ParallelZipNet.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\kevin\\.nuget\\packages\\ra_commandparser\\2.0.0-release\\ra_commandparser.2.0.0-release.nupkg.sha512",
+    "C:\\Users\\kevin\\.nuget\\packages\\ra_guards\\1.0.0-release\\ra_guards.1.0.0-release.nupkg.sha512",
+    "C:\\Users\\kevin\\.nuget\\packages\\ra_parallelcontext\\1.0.0-release\\ra_parallelcontext.1.0.0-release.nupkg.sha512",
+    "C:\\Users\\kevin\\.nuget\\packages\\ra_parallelcore\\1.0.0-release\\ra_parallelcore.1.0.0-release.nupkg.sha512",
+    "C:\\Users\\kevin\\.nuget\\packages\\ra_parallelpipeline\\1.0.0-release\\ra_parallelpipeline.1.0.0-release.nupkg.sha512"
+  ],
+  "logs": []
+}

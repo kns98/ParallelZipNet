@@ -1,0 +1,116 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v2.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v2.0": {
+      "ParallelZipNet/1.0.0": {
+        "dependencies": {
+          "RA_CommandParser": "2.0.0-release",
+          "RA_Guards": "1.0.0-release",
+          "RA_ParallelContext": "1.0.0-release",
+          "RA_ParallelCore": "1.0.0-release",
+          "RA_ParallelPipeline": "1.0.0-release"
+        },
+        "runtime": {
+          "ParallelZipNet.dll": {}
+        }
+      },
+      "RA_CommandParser/2.0.0-release": {
+        "dependencies": {
+          "RA_Guards": "1.0.0-release"
+        },
+        "runtime": {
+          "lib/netstandard2.0/CommandParser.dll": {
+            "assemblyVersion": "2.0.0.0",
+            "fileVersion": "2.0.0.0"
+          }
+        }
+      },
+      "RA_Guards/1.0.0-release": {
+        "runtime": {
+          "lib/netstandard2.0/Guards.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "RA_ParallelContext/1.0.0-release": {
+        "dependencies": {
+          "RA_Guards": "1.0.0-release",
+          "RA_ParallelCore": "1.0.0-release"
+        },
+        "runtime": {
+          "lib/netstandard2.0/ParallelContext.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "RA_ParallelCore/1.0.0-release": {
+        "runtime": {
+          "lib/netstandard2.0/ParallelCore.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "RA_ParallelPipeline/1.0.0-release": {
+        "dependencies": {
+          "RA_Guards": "1.0.0-release",
+          "RA_ParallelCore": "1.0.0-release"
+        },
+        "runtime": {
+          "lib/netstandard2.0/ParallelPipeline.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ParallelZipNet/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "RA_CommandParser/2.0.0-release": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-8kpMRllWgR9wqERB8wGnGLujQ52aS04MR4OT0b84LuaQC/8phJOO3ZNPS9HBYl62mL/wyYDXNgcPkIbSOKuKVA==",
+      "path": "ra_commandparser/2.0.0-release",
+      "hashPath": "ra_commandparser.2.0.0-release.nupkg.sha512"
+    },
+    "RA_Guards/1.0.0-release": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fmwhv2Ds1SbW7o2iaGAX0x0Cy59oDZhFMsynsiixUC3uTAmcnz//Y78n9Z2IDb5f2vfticdwGcDlcuMHRNxf2g==",
+      "path": "ra_guards/1.0.0-release",
+      "hashPath": "ra_guards.1.0.0-release.nupkg.sha512"
+    },
+    "RA_ParallelContext/1.0.0-release": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-RjryXYZRJalxXrqNueUou+75zn58pexNvJaMeahWqVHl3GZpayO1fJ6IYzeXhQE9Pt5bzZXuD3WGSd6+xj18PA==",
+      "path": "ra_parallelcontext/1.0.0-release",
+      "hashPath": "ra_parallelcontext.1.0.0-release.nupkg.sha512"
+    },
+    "RA_ParallelCore/1.0.0-release": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+oNXX3eXcLtST5Ho/GKEuKb2vWRf4O1tWdB1dF6ujmbKz/I4NQJL0wfPhuFPsn1yWsTHgyyK6loOuJGiSFMVUw==",
+      "path": "ra_parallelcore/1.0.0-release",
+      "hashPath": "ra_parallelcore.1.0.0-release.nupkg.sha512"
+    },
+    "RA_ParallelPipeline/1.0.0-release": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zN5NPrpYskO9Lq+IKiJPltx7xrpmWBfn+Djf28yFyW5ICRipPdYtWCv+wuwRqV/aQWOTPbgmjnCYOFchcFLe6A==",
+      "path": "ra_parallelpipeline/1.0.0-release",
+      "hashPath": "ra_parallelpipeline.1.0.0-release.nupkg.sha512"
+    }
+  }
+}
